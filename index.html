@@ -187,7 +187,8 @@ async function loadConfig() {
   if (CFG) return CFG;
   CFG = await post("/config", {});
   CFG.office.logoUrl = "assets/logo-horizontal.png";
-  CFG.office.sealUrl = await fetch("assets/seal.png", { method:"HEAD" }).then(r => r.ok ? "assets/seal.png" : "").catch(() => "");
+  // 배경·도장 이미지 미리 로드 (html2canvas 캡처 전에 준비)
+  await Promise.all(["assets/hometax_bg.png", "assets/seal_client.png", "assets/seal_office.png", "assets/logo-horizontal.png"].map(src => new Promise(res => { const i = new Image(); i.onload = i.onerror = res; i.src = src; })));
   document.getElementById("depositHint").textContent = `이체일은 매월 ${CFG.office.depositDate}일 고정.`;
   document.getElementById("mailTo").textContent = CFG.mailTo ? `→ ${CFG.mailTo}` : "";
   return CFG;

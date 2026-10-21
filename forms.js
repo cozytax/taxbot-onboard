@@ -12,9 +12,9 @@ window.FORMS = (() => {
   const won = (n) => Number(digits(n) || 0).toLocaleString();
   const mgmtNo = (bizNo) => `${bizNo}-0`; // 사업장관리번호 = 사업자번호 + 0 (신규 사업장 관행)
 
-  // 도장: 고객은 이름 막도장(원형), 사무실은 직인(이미지 있으면 이미지, 없으면 사각 인장)
-  const nameSeal = (name) => `<span class="seal-name">${[...String(name || "").slice(0, 4)].map((ch) => `<i>${esc(ch)}</i>`).join("")}</span>`;
-  const officeSeal = (o) => o.sealUrl ? `<img class="seal-img" src="${o.sealUrl}">` : `<span class="seal-office"><span>${esc(o.name)}<br>${esc(o.rep)} 인</span></span>`;
+  // 도장: 고객 = assets/seal_client.png (샘플, 추후 교체), 사무실 = assets/seal_office.png — 둘 다 "(서명 또는 인)" 위에 겹침
+  const signC = (label = "(서명 또는 인)") => `<span class="sign"><span class="small">${label}</span><img class="seal-abs" src="assets/seal_client.png"></span>`;
+  const signO = (label = "(서명 또는 인)") => `<span class="sign"><span class="small">${label}</span><img class="seal-abs" src="assets/seal_office.png"></span>`;
 
   const CSS = `
   .page { width:794px; height:1123px; background:#fff; color:#111; font-family:"Noto Sans KR",sans-serif; font-size:11.5px; line-height:1.45; padding:46px 48px; box-sizing:border-box; position:relative; overflow:hidden; }
@@ -31,10 +31,11 @@ window.FORMS = (() => {
   .page .sec { font-weight:700; margin:12px 0 4px; }
   .page .box { border:1px solid #222; padding:7px 9px; }
   .page .stamp-row { display:flex; align-items:center; gap:10px; }
-  .seal-name { display:inline-flex; flex-direction:column; align-items:center; justify-content:center; width:46px; height:46px; border:2px solid #c8102e; border-radius:50%; color:#c8102e; vertical-align:middle; margin-left:-12px; opacity:.9; transform:rotate(-8deg); }
-  .seal-name > i { font-style:normal; font-size:11px; font-weight:700; line-height:1.05; display:block; }
-  .seal-office { display:inline-flex; align-items:center; justify-content:center; width:58px; height:58px; border:2.5px solid #c8102e; color:#c8102e; font-size:9px; font-weight:700; text-align:center; line-height:1.25; vertical-align:middle; margin-left:-16px; opacity:.9; }
-  .seal-img { width:58px; height:58px; vertical-align:middle; margin-left:-16px; }
+  .sign { position:relative; display:inline-block; }
+  .seal-abs { position:absolute; width:50px; height:50px; left:50%; top:50%; transform:translate(-50%,-52%); opacity:.9; pointer-events:none; }
+  .ov { position:absolute; white-space:nowrap; line-height:1; font-family:"Noto Sans KR",sans-serif; color:#111; }
+  .ov.c { text-align:center; }
+  .ov img { position:absolute; left:0; top:0; width:100%; height:100%; opacity:.92; }
   .chk { display:inline-block; width:12px; height:12px; border:1px solid #222; vertical-align:-2px; margin:0 3px 0 1px; text-align:center; font-size:10px; line-height:10px; }
   .chk.on::after { content:"V"; font-weight:700; }
   .formno { font-size:10px; color:#333; }
@@ -114,78 +115,52 @@ window.FORMS = (() => {
   <div class="date-line">${t.y} 년 &nbsp; ${t.m} 월 &nbsp; ${t.d} 일</div>
   <table style="margin-top:4px;">
     <tr>
-      <th style="width:14%">신청인</th><td style="width:36%;height:52px;"><span style="margin-left:60px;">${esc(c.repName)}</span> ${nameSeal(c.repName)} <span class="tiny">(인) 또는 서명</span></td>
-      <th style="width:14%">예금(카드)주<br>동의란</th><td><span style="margin-left:60px;">${esc(c.accountHolder)}</span> ${nameSeal(c.accountHolder)} <span class="tiny">(인) 또는 서명</span></td>
+      <th style="width:14%">신청인</th><td style="width:36%;height:52px;"><span style="margin-left:60px;">${esc(c.repName)}</span> ${signC("(인) 또는 서명")}</td>
+      <th style="width:14%">예금(카드)주<br>동의란</th><td><span style="margin-left:60px;">${esc(c.accountHolder)}</span> ${signC("(인) 또는 서명")}</td>
     </tr>
   </table>
   <div class="tiny" style="margin-top:6px;color:#c8102e;font-weight:700;">*신청인과 예금주/카드주가 상이한 경우에는 예금주/카드주가 의 동의 필요하며, 날인 또는 서명은 출금통장의 거래날인, 서명 사용</div>
 </div>`;
   }
 
-  /* ---------- 2. 홈택스 세무대리정보 이용(해지)신청서 [별지 제6호 서식] (PDF) ---------- */
+  /* ---------- 2. 홈택스 세무대리정보 이용(해지)신청서 [별지 제6호 서식] (PDF) ----------
+   * 국세청 제출용이라 원본 서식(PDF → assets/hometax_bg.png)을 배경으로 깔고 값만 좌표에 얹음.
+   * 좌표 단위는 PDF pt(원본 595×842). K 로 CSS px 환산. */
   function hometax(d) {
     const { o, c, t } = d;
-    const corp = c.bizType === "02";
+    const K = 794 / 595;
+    const T = (x, y, text, fs = 10.5, w = 0, cls = "") =>
+      `<div class="ov ${cls}" style="left:${(x * K).toFixed(1)}px;top:${(y * K).toFixed(1)}px;font-size:${(fs * K).toFixed(1)}px;${w ? `width:${(w * K).toFixed(1)}px;` : ""}">${esc(text)}</div>`;
+    const IMG = (x, y, w, h, src) => `<div class="ov" style="left:${(x * K).toFixed(1)}px;top:${(y * K).toFixed(1)}px;width:${(w * K).toFixed(1)}px;height:${(h * K).toFixed(1)}px;"><img src="${src}"></div>`;
+    const SIGN = "(서명 또는 인)";
+    const dd = (n) => String(n).padStart(2, "0");
     return `
-<div class="page" style="font-size:10.5px;padding:38px 46px;">
-  <div class="formno">[별지 제6호 서식]</div>
-  <h1 style="margin:2px 0 2px;">홈택스 세무대리정보 이용(해지)신청서</h1>
-  <div class="r small" style="margin-bottom:4px;">접수번호 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
-  <table>
-    <tr><th rowspan="5" style="width:17%;text-align:left;">1.신청인 및<br>정보이용(해지)<br>사업장</th>
-        <td style="width:41.5%"><span class="small">① 성명(대표자명)</span><br><span class="v">${esc(c.repName)}</span></td>
-        <td><span class="small">② 주민등록번호(외국인등록번호 등)</span><br><span class="v">${esc(c.rrn)}</span></td></tr>
-    <tr><td><span class="small">③-1 상호(법인명)</span><br><span class="v">${esc(c.bizName)}</span></td><td><span class="small">④-1 사업자등록번호</span><br><span class="v">${esc(c.bizNo)}</span></td></tr>
-    <tr><td><span class="small">③-2</span></td><td><span class="small">④-2</span></td></tr>
-    <tr><td><span class="small">③-3</span></td><td><span class="small">④-3</span></td></tr>
-    <tr><td colspan="2"><span class="small">⑤ 연락처(전화번호 : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ) &nbsp;&nbsp;(휴대전화번호 : </span><span class="v">${esc(c.phone)}</span><span class="small"> )</span></td></tr>
-    <tr><th style="text-align:left;">2.신청 구분</th><td colspan="2">
-        <span class="small">⑥ 정보이용 신청</span> <span class="chk on"></span><br>
-        <span class="small">⑦ 기존 정보이용 해지 후 새로운 정보이용 신청</span> <span class="chk"></span><br>
-        <span class="small">⑧ 정보이용 해지신청</span> <span class="chk"></span></td></tr>
-    <tr><th style="text-align:left;">3.세무대리정보<br>이용 구분 등<br><span class="small">(정보이용 신청<br>시 작성)</span></th><td colspan="2" class="small">
-        ⑨ 세무대리정보이용 구분 및 기간<br>
-        &nbsp;▶ 기장대리 : 동의 처리일로부터 <b>해지일까지</b> <span class="chk on"></span><br>
-        &nbsp;▶ 신고대리 : 동의 처리일로부터 <b>당해 세무신고의 신고기한까지</b> <span class="chk"></span><br>
-        &nbsp;&nbsp;&nbsp;&nbsp;외부조정(법인) : 동의 처리일로부터 <b>당해 세무신고의 신고기한까지</b> <span class="chk"></span><br>
-        &nbsp;※ 세무대리인의 정보 이용 범위: 「홈택스 이용에 관한 규정」 제54조의 정보<br>
-        <b>※ 신청인의 개인정보보호를 위하여 세무대리인과 위임계약이 해지된 경우 반드시 신청인 또는 세무대리인이 홈택스에서 수임등록을 해지하시기 바랍니다.</b></td></tr>
-    <tr><th rowspan="2" style="text-align:left;">4.정보이용(해지)<br>세무대리인</th>
-        <td><span class="small">⑩ 성명(상호)</span><br><span class="v">${esc(o.name)}</span></td><td><span class="small">⑪ 사업자등록번호</span><br><span class="v">${esc(o.bizNo)}</span></td></tr>
-    <tr><td><span class="small">⑫ 세무사관리번호</span><br><span class="v">${esc(o.taxAgentNo)}</span></td><td><span class="small">⑬ 연락처</span><br><span class="v">${esc(o.mobile)}</span></td></tr>
-  </table>
-  <div style="margin:10px 0 4px;">상기 세무대리인이 국세청 홈택스에서 제공되는 신청인의 세무관련 정보 이용(해지)에 대하여 동의합니다.</div>
-  <div class="r" style="margin:6px 20px 2px 0;">${t.y} 년 &nbsp; ${t.m} 월 &nbsp; ${t.d} 일</div>
-  <div class="r" style="margin-right:20px;">신 청 인 : &nbsp;<span style="display:inline-block;min-width:70px;text-align:center;">${esc(c.repName)}</span> ${nameSeal(c.repName)} <span class="small">(서명 또는 인)</span></div>
-  <div style="font-size:16px;font-weight:700;letter-spacing:6px;margin:6px 0 4px;">세무서장 <span style="font-size:11px;letter-spacing:0;font-weight:400;">귀하</span></div>
+<div class="page" style="padding:0;background:#fff url(assets/hometax_bg.png) no-repeat 0 0/100% 100%;">
+  ${T(195, 151.5, c.repName, 10)}
+  ${T(400, 151.5, c.rrn, 10)}
+  ${T(195, 176, c.bizName, 10)}
+  ${T(400, 176, c.bizNo, 10)}
+  ${T(380, 219.5, c.phone, 10)}
 
-  <div style="background:#e9e9e9;border:1px solid #222;border-bottom:0;padding:4px 8px;text-align:center;font-weight:700;font-size:13px;letter-spacing:8px;">위 &nbsp;임 &nbsp;장 <span style="font-size:10px;letter-spacing:0;font-weight:400;">(대리인에게 위임하는 경우 작성)</span></div>
-  <div class="box">
-    위 신청인 본인은 아래 위임받은 사람에게 홈택스 세무대리정보 이용(해지)신청에 관한 모든 권리와 의무를 위임합니다.
-    <div class="r" style="margin:8px 20px 4px 0;">위임하는 사람(신청인) : &nbsp;<span style="display:inline-block;min-width:70px;text-align:center;">${esc(c.repName)}</span> ${nameSeal(c.repName)} <span class="small">(서명 또는 인)</span></div>
-  </div>
-  <table style="border-top:0;">
-    <tr><th rowspan="2" style="width:17%">위임받은<br>사 람</th><th style="width:16%">성 명</th><td style="width:25%">${esc(o.rep)}</td><th style="width:17%">주민등록번호</th><td>${esc(o.repRrn || "")}</td></tr>
-    <tr><th>위임하는 사람과의 관계</th><td>세무대리인</td><th>연락처(전화번호)</th><td>${esc(o.mobile)}</td></tr>
-  </table>
-  <div style="background:#e9e9e9;border:1px solid #222;border-top:0;padding:3px 8px;text-align:center;font-weight:700;font-size:12px;">개인정보 수집·이용에 대한 동의 <span style="font-size:9.5px;font-weight:400;">(개인정보보호법 제24조)</span></div>
-  <div class="box small" style="border-top:0;">
-    <b>※ 동의를 거부할 권리가 있으며, 거부할 경우 신청서 처리 불가능 등의 불이익이 따를 수 있습니다.</b><br>
-    &nbsp;○ 수집·이용목적 (신청서 처리, 사후관리 등) &nbsp;&nbsp;&nbsp;&nbsp; ○ 보유·이용기간 ( 5년 )<br>
-    &nbsp;○ 수집대상 고유식별정보 (주민등록번호, 외국인등록번호, 여권번호 등)<br>
-    &nbsp;<span class="chk on"></span> 상기내용에 대해 동의합니다. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="chk"></span> 상기내용에 대해 동의하지 않습니다.<br>
-    <div style="display:flex;justify-content:space-between;margin-top:6px;padding:0 10px;">
-      <span>신청인 : <span style="display:inline-block;min-width:70px;text-align:center;">${esc(c.repName)}</span> ${nameSeal(c.repName)} (서명 또는 인)</span>
-      <span>위임받은 사람 : <span style="display:inline-block;min-width:60px;text-align:center;">${esc(o.rep)}</span> ${officeSeal(o)} (서명 또는 인)</span>
-    </div>
-  </div>
-  <div class="tiny" style="margin-top:8px;">
-    <b>※ 정보이용(해지) 신청 시 준비하실 사항</b><br>
-    1.신청인 또는 국세기본법 제82조의 납세관리인이 신청 시 신분증(주민등록증, 운전면허증, 여권 등)<br>
-    2.세무대리인 등 위임받은 사람이 신청 시 위임하는 사람(법인의 경우 법인대표자 등)의 신분증*(사본) 및 위임받은 사람의 신분증<br>
-    <span style="margin-left:8px;">* 위임하는 사람이 희망하는 경우에 3개월 이내에 발급된 인감증명서(사본), 법인인감증명서(사본),본인서명사실확인서, 전자본인서명사실확인서 가능</span><br>
-    <b>※ 다른 사람의 인장 도용 등 허위로 위임장을 작성하여 신청할 경우에는 「형법」 제231조와 제232조에 따라 사문서 위ㆍ변조 죄로 5년 이하의 징역 또는 1천만원 이하의 벌금에 처하게 됩니다.</b>
-  </div>
+  ${T(366, 483.5, String(t.y), 10.5, 30, "c")}
+  ${T(428, 483.5, dd(t.m), 10.5, 14, "c")}
+  ${T(470, 483.5, dd(t.d), 10.5, 14, "c")}
+  ${T(486.7, 483.2, "일", 11)}
+
+  ${T(372, 498.8, c.repName, 10.5, 100, "c")}
+  ${T(481.3, 500.2, SIGN, 8.5)}
+  ${IMG(478, 476, 44.5, 44.5, "assets/seal_client.png")}
+
+  ${T(370, 587.7, c.repName, 10.5, 100, "c")}
+  ${T(475, 589.2, SIGN, 8.5)}
+  ${IMG(478, 565, 44.5, 44.5, "assets/seal_client.png")}
+
+  ${T(435.8, 620.8, ": " + (o.repRrn || ""), 10)}
+
+  ${T(135, 728.2, c.repName, 10.5, 100, "c")}
+  ${IMG(216, 706, 40, 40, "assets/seal_client.png")}
+  ${T(478.4, 729.7, SIGN, 8.5)}
+  ${IMG(481, 696.5, 43, 40, "assets/seal_office.png")}
 </div>`;
   }
 
@@ -208,7 +183,7 @@ window.FORMS = (() => {
   </table>
   <div style="margin:34px 20px 0;font-size:12px;line-height:1.9;">민법 제114조(대리행위의 효력)의 규정에 의하여 위와 같이 건강보험 EDI 업무대행 대리인 위임을 신청합니다.</div>
   <div class="date-line" style="margin:50px 0 16px;text-align:right;padding-right:40px;">${t.y} 년 &nbsp; ${t.m} 월 &nbsp; ${t.d} 일</div>
-  <div class="r" style="padding-right:40px;font-size:12px;">신청인 &nbsp;<span style="display:inline-block;min-width:80px;text-align:center;">${esc(c.repName)}</span> ${nameSeal(c.repName)} <span class="small">(서명 또는 인)</span></div>
+  <div class="r" style="padding-right:40px;font-size:12px;">신청인 &nbsp;<span style="display:inline-block;min-width:80px;text-align:center;">${esc(c.repName)}</span> ${signC()}</div>
   <div class="c" style="margin-top:30px;font-size:16px;font-weight:700;letter-spacing:2px;">국민건강보험공단 &nbsp;○○○○지사장 <span style="font-size:11px;font-weight:400;">귀하</span></div>
   <hr style="border:0;border-top:1px solid #222;margin:40px 0 18px;">
   <div style="font-size:11.5px;line-height:1.8;padding:0 10px;">이 위임장은 웹EDI를 통하여 '건강보험 EDI 업무대행 위임 신청' 전송 시 첨부하는 서류입니다.</div>
@@ -240,7 +215,7 @@ window.FORMS = (() => {
   <div style="margin:14px 6px 0;line-height:1.8;">위와 같이 귀 보험사무대행기관에 <span class="chk on"></span>고용보험 <span class="chk on"></span>산업재해보상보험(임금채권 및 석면피해구제 포함) 사무의 처리를 위탁합니다.</div>
   <div class="r" style="margin:14px 40px 0 0;">${t.y} 년 &nbsp; ${t.m} 월 &nbsp; ${t.d} 일</div>
   <div style="margin:10px 0 0 170px;line-height:2;">위탁사업주 &nbsp;주소 &nbsp;&nbsp;${esc(c.bizAddress || "")}<br>
-    <span style="margin-left:66px;">성명</span> &nbsp;&nbsp;<span style="display:inline-block;min-width:80px;text-align:center;margin-left:170px;">${esc(c.repName)}</span> ${nameSeal(c.repName)} <span class="small">(서명 또는 인)</span></div>
+    <span style="margin-left:66px;">성명</span> &nbsp;&nbsp;<span style="display:inline-block;min-width:80px;text-align:center;margin-left:170px;">${esc(c.repName)}</span> ${signC()}</div>
   <div style="margin:16px 0 0 80px;"><u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;보험사무대행기관 대표&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u> 귀하</div>
 
   <div style="margin:40px 0 10px;border-top:2px dotted #222;"></div>
@@ -253,7 +228,7 @@ window.FORMS = (() => {
   <div style="margin:10px 0 0 230px;line-height:2.1;">
     보험사무대행기관 명 &nbsp;칭 &nbsp;&nbsp;${esc(o.name)}<br>
     <span style="margin-left:116px;">소재지</span> &nbsp;&nbsp;${esc(o.address)}<br>
-    <span style="margin-left:116px;">대표자</span> &nbsp;&nbsp;<span style="display:inline-block;min-width:80px;text-align:center;">${esc(o.rep)}</span> ${officeSeal(o)} <span class="small">(서명 또는 인)</span>
+    <span style="margin-left:116px;">대표자</span> &nbsp;&nbsp;<span style="display:inline-block;min-width:80px;text-align:center;">${esc(o.rep)}</span> ${signO()}
   </div>
   <div style="margin:20px 0 0 40px;"><u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u> 귀하</div>
   <div class="tiny r" style="position:absolute;right:48px;bottom:30px;">210mm×297mm[일반용지 60g/㎡(재활용품)]</div>
@@ -289,8 +264,8 @@ window.FORMS = (() => {
   <div style="margin:22px 10px 0;line-height:1.9;">위탁사업장은 민법 제114조 규정에 따라 국민연금 웹 EDI 업무대행을 위탁하고, 업무대행기관은 대행기관으로서 제반 업무처리에 따른 법적 책임을 부담하며, 각 신청인은 개인정보의 부적정 사용을 방지하기 위한 조치를 취하고 불법 유출 등으로 발생하는 손해배상 등에 대하여 연대하여 책임질 것을 서약하며 업무대행을 신청합니다.</div>
   <div class="r" style="margin:34px 60px 0 0;font-size:12px;">${t.y} 년 &nbsp; ${t.m} 월 &nbsp; ${t.d} 일</div>
   <div style="margin:14px 0 0 120px;line-height:2.4;font-size:12px;">
-    신청인(업무대행기관 사용자) &nbsp;&nbsp;<span style="display:inline-block;min-width:70px;text-align:center;margin-left:40px;">${esc(o.rep)}</span> ${officeSeal(o)} <span class="small">(서명 또는 인)</span><br>
-    신청인(업무대행 위탁사업장 사용자) &nbsp;&nbsp;<span style="display:inline-block;min-width:70px;text-align:center;">${esc(c.repName)}</span> ${nameSeal(c.repName)} <span class="small">(서명 또는 인)</span>
+    신청인(업무대행기관 사용자) &nbsp;&nbsp;<span style="display:inline-block;min-width:70px;text-align:center;margin-left:40px;">${esc(o.rep)}</span> ${signO()}<br>
+    신청인(업무대행 위탁사업장 사용자) &nbsp;&nbsp;<span style="display:inline-block;min-width:70px;text-align:center;">${esc(c.repName)}</span> ${signC()}
   </div>
   <div style="margin:30px 0 0 110px;font-size:18px;font-weight:700;letter-spacing:4px;">국민연금공단 &nbsp;&nbsp;&nbsp;&nbsp;지사장 <span style="font-size:12px;font-weight:400;letter-spacing:0;">귀하</span></div>
   <div class="tiny r" style="position:absolute;right:48px;bottom:48px;">수수료 없음</div>

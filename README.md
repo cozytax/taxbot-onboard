@@ -6,13 +6,14 @@
 | 파일 | 형식 | 템플릿 |
 |---|---|---|
 | 자동이체 이용 신청서 (CMS) | JPG | `forms.js` → `cms()` |
-| 홈택스 세무대리정보 이용(해지)신청서 [별지 제6호] | PDF | `hometax()` |
+| 홈택스 세무대리정보 이용(해지)신청서 [별지 제6호] | PDF | `hometax()` — 국세청 제출용이라 원본 서식 PDF를 배경(`assets/hometax_bg.png`)으로 깔고 값만 좌표에 얹음 |
 | 건강보험 EDI 업무대행 위임장 [별지 제6호] | PDF | `nhis()` |
 | 보험사무대행기관 사무위탁서 (고용·산재) | PDF | `goyong()` |
 | 국민연금 웹 EDI 업무대행 신청서 [별지 제4호] | PDF | `pension()` |
 | 더빌 MEM 엑셀 | XLS | `assets/dbill_template.xls` 에 4행 추가 (`excelRow()`) |
 
-문구·배치는 전부 `forms.js` 한 파일. 원본 HWP 문구를 그대로 옮겼고, 고객 날인은 이름 도장(원형), 사무실은 `assets/seal.png` 직인.
+문구·배치는 전부 `forms.js` 한 파일. 원본 HWP 문구를 그대로 옮김.
+도장은 모든 "(서명 또는 인)" 위에 이미지로 찍힘: 고객 = `assets/seal_client.png`(현재 샘플, 교체 예정), 사무실 = `assets/seal_office.png`(代表之印). 교체하려면 같은 파일명으로 덮어쓰기(흰 배경은 자동 투명 처리 안 되니 투명 PNG 권장).
 
 ## 구성
 | 파일 | 역할 | 배포 |
