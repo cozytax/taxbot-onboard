@@ -425,7 +425,10 @@ document.getElementById("btnSend").addEventListener("click", async () => {
   const btn = document.getElementById("btnSend"), err = document.getElementById("err3");
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>발송 중'; err.textContent = "";
   try {
-    await post("/send", { client: CLIENT, files: FILES.map(f => ({ filename: f.name, content: f.content })), stamp: new Date().toLocaleString("ko-KR") });
+    const r = await post("/send", { client: CLIENT, files: FILES.map(f => ({ filename: f.name, content: f.content })), stamp: new Date().toLocaleString("ko-KR") });
+    const msg = document.getElementById("doneMsg");
+    if (r.notion && r.notion.startsWith("http")) msg.innerHTML = `결과 메일에 서류 7종이 첨부됐고, 노션 '신규 및 이관 거래처'에 추가됐습니다. <a href="${r.notion}" target="_blank">노션에서 열기</a>`;
+    else if (r.notion && r.notion !== "skipped") msg.textContent = "메일은 발송됐지만 노션 추가 " + r.notion;
     go(4);
   } catch (e) { err.textContent = "발송 실패: " + e.message + "\n파일은 위에서 직접 다운로드할 수 있음."; btn.disabled = false; btn.innerHTML = "메일 보내기"; }
 });

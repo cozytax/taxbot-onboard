@@ -14,6 +14,8 @@
  *   ANTHROPIC_API_KEY    OCR 엔진 (있으면 Claude 우선), OCR_MODEL (기본 claude-sonnet-5-5)
  *   GEMINI_API_KEY       Anthropic 키 없을 때 사용, GEMINI_MODEL (기본 gemini-2.5-flash)
  *   RESEND_API_KEY, MAIL_FROM, MAIL_TO(쉼표 구분)
+ *   NOTION_TOKEN         노션 내부 통합(integration) 시크릿 — 있으면 '신규 및 이관 거래처' DB에 행 추가
+ *   NOTION_DB_ID         기본값 fdb50242aa81486dbe6c844caed4f7ed (신규 및 이관 거래처)
  *   OFFICE_JSON          사무실 정보 JSON (secret) — 아래 OFFICE_DEFAULT 와 병합. 대표자 주민번호(repRrn)는 여기에만.
  *   ALLOWED_ORIGIN       CORS (기본 *)
  */
@@ -180,7 +182,59 @@ async function send(p, env) {
     }),
   });
   if (!r.ok) throw new Error(`메일 발송 실패 ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  return { ok: true };
+
+  // 노션 '신규 및 이관 거래처' 에 행 추가 (실패해도 메일은 이미 발송됨 → 결과만 알려줌)
+  let notion = "skipped";
+  if (env.NOTION_TOKEN) {
+    try { notion = await notionCreate(c, env); } catch (e) { notion = "실패: " + String(e?.message || e).slice(0, 200); }
+  }
+  return { ok: true, notion };
+}
+
+async function notionCreate(c, env) {
+  const txt = (v) => ({ rich_text: v ? [{ text: { content: String(v).slice(0, 2000) } }] : [] });
+  const bankOpt = (() => {
+    const n = String(c.bankName || "").replace(/은행|뱅크|\s/g, "");
+    if (!n) return null;
+    if (/토스|카카오/.test(n)) return n + "뱅크";
+    if (n === "우체국") return n;
+    return n + "은행";
+  })();
+  const region = (() => { const a = String(c.bizAddress || ""); if (/^서울/.test(a)) return "서울"; if (/^경기/.test(a)) return "경기"; if (/^인천/.test(a)) return "인천"; if (/여수/.test(a)) return "여수"; return null; })();
+  const sectors = ["의룡업", "외료업", "제조업", "음식점업", "서비스업", "정보통신업", "카페", "소매", "생화", "도매및소매업", "교육서비스업", "도매및 소매업 건설업", "무역업"];
+  const sector = sectors.find((x) => String(c.category || "").includes(x) || String(c.item || "").includes(x)) || null;
+  const props = {
+    "거래처명": { title: [{ text: { content: c.bizName } }] },
+    "구분": { multi_select: [{ name: c.bizType === "02" ? "법인사업자" : "개인사업자" }] },
+    "종류": { multi_select: [{ name: "신규" }] },
+    "상태": { status: { name: "진행 중" } },
+    "사업자번호": txt(c.bizNo),
+    "대표자": txt(c.repName),
+    "대표자 주민등록번호": txt(c.rrn),
+    "대표자번호": txt(c.phone),
+    "법인등록번호": txt(c.bizType === "02" ? c.corpRegNo : ""),
+    "주소": txt(c.bizAddress),
+    "홈택스ID": txt(c.hometaxId),
+    "홈택스PW": txt(c.hometaxPw),
+    "계좌번호": txt(c.accountNumber),
+    "기장료(VAT포함)": { number: Number(digits(c.amount)) || null },
+    "이체 희망일": { select: { name: `${env.DEPOSIT_DATE || "20"}일` } },
+    "CMS": { checkbox: true },
+    "특이사항": txt(`업태/종목: ${c.category || ""} / ${c.item || ""}` + (c.regType ? ` · ${c.regType}` : "") + (c.start ? ` · 이체 시작 ${c.start}` : "")),
+  };
+  if (c.email && /@/.test(c.email)) props["이메일"] = { email: c.email };
+  if (bankOpt) props["은행"] = { select: { name: bankOpt } };
+  if (region) props["지역"] = { select: { name: region } };
+  if (sector) props["업종"] = { select: { name: sector } };
+
+  const r = await fetch("https://api.notion.com/v1/pages", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${env.NOTION_TOKEN}`, "Notion-Version": "2022-06-28", "content-type": "application/json" },
+    body: JSON.stringify({ parent: { database_id: env.NOTION_DB_ID || "fdb50242aa81486dbe6c844caed4f7ed" }, properties: props }),
+  });
+  if (!r.ok) throw new Error(`Notion ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const j = await r.json();
+  return j.url || "ok";
 }
 
 /* ---------- helpers ---------- */

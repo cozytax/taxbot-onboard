@@ -31,6 +31,7 @@
 | `MAIL_FROM` | Secret | 도메인 인증 전 `onboarding@resend.dev`, 인증 후 `onboard@cozytax.co.kr` |
 | `MAIL_TO` | Secret | 결과 수신 (쉼표로 여러 명) |
 | `OFFICE_JSON` | Secret | 사무실 정보 보정값. **대표자 주민번호는 여기에만**: `{"repRrn":"930510-1******"}` 형태. 다른 항목(name, rep, repBirth, bizNo, address, phone, mobile, taxAgentNo, depositDate, paymm)도 덮어쓰기 가능 |
+| `NOTION_TOKEN` | Secret | 노션 내부 통합 시크릿 — 있으면 메일 발송 시 '신규 및 이관 거래처' DB에 행 추가 (DB 페이지 ⋯ → 연결 에서 통합 추가 필요) |
 | `OCR_MODEL` | Variable | `claude-sonnet-5-5` (wrangler.toml) |
 | `ALLOWED_ORIGIN` | Variable | `https://cozytax.github.io` |
 
@@ -38,7 +39,8 @@
 1. `https://cozytax.github.io/taxbot-onboard/?k=STAFF_KEY` (한 번 열면 브라우저에 키 저장)
 2. 사진 3장 → 인식하기 → 값 확인·수정 → 기장료·이체시작월·휴대폰(·이메일·홈택스ID/PW) 입력 → **서류 7종 생성**
 3. 미리보기에서 각 파일 다운로드 가능 → **메일 보내기** → MAIL_TO 로 6종 첨부 발송
-4. 홈택스 수임동의 요청은 직원이 홈택스에서 직접
+4. 같은 순간 노션 '신규 및 이관 거래처'에 행 추가 (거래처명·구분·종류=신규·상태=진행 중·사업자번호·대표자·주민번호·연락처·주소·이메일·홈택스·은행·계좌·기장료·이체희망일·CMS·지역·업종·특이사항)
+5. 홈택스 수임동의 요청은 직원이 홈택스에서 직접
 
 ## 동작 메모
 - OCR 호출은 **직원 브라우저에서 직접** (Cloudflare Worker 발신 IP가 Google·Anthropic 미지원 지역으로 잡혀 서버 호출 불가). Worker는 키 전달·결과 검증만.
