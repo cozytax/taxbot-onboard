@@ -6,14 +6,19 @@ Tally 폼 대체. 직원이 고정 링크를 열어 고객이 보낸 사진 3장
 | 파일 | 배포 위치 |
 |---|---|
 | `index.html` | GitHub Pages — `https://cozytax.github.io/taxbot-onboard/` |
-| `worker.js` | Cloudflare Workers (신규 Worker `taxbot-onboard`) |
-| `wrangler.toml` | Worker 설정 (시크릿 미포함) |
+| `worker.js` + `server.js` | **Railway** (Node) — GitHub 연동 자동 배포 |
+| `wrangler.toml` | Cloudflare Workers 용 (사용 안 함 — Workers 발신 IP가 Anthropic·Gemini 미지원 지역으로 잡혀 403/400) |
 
 기존 콩벤처스 Worker 코드는 건드리지 않음. `/register` `/agree-cms` `/agree-tax` `/excel` 을 그대로 호출.
 4대보험 위임장 3종은 명세에 없지만 `/agree-tax?...&type=health|goyong|yungum` 으로 생성됨(기존 메일 링크에서 확인).
 기존 Worker 주소(`TAXBOT_BASE`)는 무인증 GET API라 **코드·저장소에 넣지 않고 secret 으로만** 등록.
 
-## 배포
+## 배포 (Railway)
+1. railway.com → New Project → Deploy from GitHub repo → `cozytax/taxbot-onboard`
+2. Variables 에 아래 추가: `TAXBOT_BASE` `ANTHROPIC_API_KEY` `RESEND_API_KEY` `STAFF_KEY` `MAIL_FROM` `MAIL_TO` `CMS_PAYMM=12` `DEPOSIT_DATE=20` `OCR_MODEL=claude-sonnet-5-5`
+3. Settings → Networking → Generate Domain → 나온 주소를 `index.html` 의 `WORKER_BASE` 에 넣고 push
+
+## 배포 (Cloudflare Workers — 참고용, 현재 미사용)
 ```bash
 npm i -g wrangler
 wrangler login
