@@ -169,7 +169,7 @@ async function ocrClaude(images, env) {
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model, max_tokens: 1500, temperature: 0, messages: [{ role: "user", content }] }),
+    body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: "user", content }] }),
   });
   if (!r.ok) throw new Error(`OCR API ${r.status}: ${(await r.text()).slice(0, 300)}`);
   const data = await r.json();
