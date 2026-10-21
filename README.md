@@ -19,10 +19,13 @@ wrangler login
 wrangler secret put TAXBOT_BASE      # https://taxbot.kongventures.workers.dev
 wrangler secret put GEMINI_API_KEY
 wrangler secret put STAFF_KEY        # 직원 접근 키 (아무 문자열)
-wrangler secret put POSTMARK_TOKEN
+wrangler secret put RESEND_API_KEY   # resend.com → API Keys
 wrangler deploy
 ```
 `wrangler.toml` 의 `[vars]` 에 MAIL_FROM, MAIL_TO 확인.
+
+메일 발송은 Resend 사용: resend.com 가입 → Domains 에 `cozytax.co.kr` 추가하고 안내되는 DNS 레코드(SPF/DKIM) 등록 → API Keys 발급.
+도메인 인증 전에는 `MAIL_FROM = "onboarding@resend.dev"` 로 두면 가입한 본인 메일로만 테스트 발송 가능.
 `index.html` 상단 `WORKER_BASE` 를 배포된 Worker 주소로 교체 후 커밋 → GitHub Pages 자동 반영.
 
 ## 사용 (직원)

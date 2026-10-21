@@ -12,7 +12,9 @@
  *   GEMINI_API_KEY, GEMINI_MODEL(기본 gemini-2.5-flash)
  *   TAXBOT_BASE          기존 Worker 주소 — secret 으로 등록 (공개 저장소에 올리지 말 것)
  *   STAFF_KEY            직원 접근 키 (링크의 ?k= 값)
- *   POSTMARK_TOKEN, MAIL_FROM, MAIL_TO
+ *   RESEND_API_KEY       resend.com API 키
+ *   MAIL_FROM            Resend 에서 인증한 도메인의 발신 주소 (예: onboard@cozytax.co.kr)
+ *   MAIL_TO              결과 수신 메일 (쉼표로 여러 명 가능)
  *   ALLOWED_ORIGIN       CORS 허용 오리진 (기본 *)
  *   CMS_PAYMM            /excel 의 paymm(납부횟수, 기본 12)
  *   DEPOSIT_DATE         이체일 (기본 20)
@@ -222,7 +224,7 @@ async function submit(p, env) {
     const s = settled[i];
     if (s.status === "fulfilled" && s.value.ok) {
       const buf = await s.value.arrayBuffer();
-      attachments.push({ Name: `${p.bizName}_${name}`, Content: b64(buf), ContentType: type });
+      attachments.push({ filename: `${p.bizName}_${name}`, content: b64(buf) });
       results[k] = "ok";
     } else {
       results[k] = s.status === "fulfilled" ? `HTTP ${s.value.status}` : String(s.reason);
@@ -250,10 +252,15 @@ async function submit(p, env) {
     </table>
     <p style="color:#999;font-size:12px">제출 ${now.y}-${now.m}-${now.d} ${now.hm} KST · 자동 생성 메일</p>`;
 
-  const mail = await fetch("https://api.postmarkapp.com/email", {
+  const mail = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { "content-type": "application/json", "X-Postmark-Server-Token": env.POSTMARK_TOKEN },
-    body: JSON.stringify({ From: env.MAIL_FROM, To: env.MAIL_TO, Subject: `[신규수임] ${p.bizName} (${fmtBizNo(bizNoD)})`, HtmlBody: html, Attachments: attachments }),
+    headers: { "content-type": "application/json", "Authorization": `Bearer ${env.RESEND_API_KEY}` },
+    body: JSON.stringify({
+      from: env.MAIL_FROM,
+      to: String(env.MAIL_TO).split(",").map((x) => x.trim()).filter(Boolean),
+      subject: `[신규수임] ${p.bizName} (${fmtBizNo(bizNoD)})`,
+      html, attachments,
+    }),
   });
   results.mail = mail.ok ? "ok" : `HTTP ${mail.status} ${(await mail.text()).slice(0, 200)}`;
 
