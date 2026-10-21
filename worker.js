@@ -14,7 +14,7 @@
  *   STAFF_KEY            직원 접근 키 (링크의 ?k= 값)
  *   POSTMARK_TOKEN, MAIL_FROM, MAIL_TO
  *   ALLOWED_ORIGIN       CORS 허용 오리진 (기본 *)
- *   CMS_PAYMM            /excel 의 paymm 값 (기본 12) — 의미 확인 필요
+ *   CMS_PAYMM            /excel 의 paymm(납부횟수, 기본 12)
  *   DEPOSIT_DATE         이체일 (기본 20)
  */
 
@@ -198,10 +198,10 @@ async function submit(p, env) {
       repName: p.repName, rsdntRgnmb: rrn, corpName: p.bizName, bizNum: fmtBizNo(bizNoD), phone: ph.join("-"),
     }),
     excel: `${base}/excel?` + qs({
-      membername: p.bizName,            // 회원이름 = 상호로 가정 — 확인 필요
+      membername: p.repName,            // 더빌 회원명 = 대표자명 (기존 산출물 확인)
       hpno: phoneD, bankcd: bankCd, accountno: digits(p.accountNumber), accountname: p.accountHolder,
       idno: rrn.slice(0, 6), dealwon: amount, hopeichedt: depositDate,
-      paymm: env.CMS_PAYMM || "12",     // 의미 확인 필요
+      paymm: env.CMS_PAYMM || "12",     // 납부횟수
       servicesdt: start, etaxyn: "A",
       etaxchaoffno: fmtBizNo(bizNoD), etaxchaname: p.bizName, etaxchaowner: p.repName,
     }),

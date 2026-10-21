@@ -42,8 +42,7 @@ wrangler deploy
 | 항목 | 가정 | 위치 |
 |---|---|---|
 | 홈택스 ID/PW 전달 경로 | 기존 API 어디에도 없음 → 메일 본문에만 포함 | submit() |
-| `/excel` `membername` | 상호(bizName) | submit() |
-| `/excel` `paymm` | 12 (예시값 그대로) — 의미 불명 | env `CMS_PAYMM` |
+| 4대보험 위임장 3종 (건강보험 EDI·고용산재·국민연금) | 기존 메일에는 포함되나 API 명세에 없음 → 엔드포인트 확인 후 추가 예정 | submit() |
 | `/register` 응답 형식 | HTML/텍스트로 가정, 메일에 앞 500자 표시 | callText() |
 | Gemini 모델명 | `gemini-2.5-flash` — 사용 가능 모델로 교체 | env `GEMINI_MODEL` |
 | 운전면허증 | 프롬프트는 주민등록증 기준 | OCR_PROMPT |
