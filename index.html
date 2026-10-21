@@ -190,15 +190,53 @@ document.getElementById("btnOcr").addEventListener("click", async () => {
   const btn = document.getElementById("btnOcr"), err = document.getElementById("err1");
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>인식 중 (10~20초)'; err.textContent = "";
   try {
-    const r = await fetch(WORKER_BASE + "/ocr", { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ images, key: KEY }) });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || "인식 실패");
+    // 1) 서버에서 OCR 엔진 정보 (직원키 확인)
+    const cfg = await post("/ocr-config", {});
+    // 2) 브라우저에서 OCR API 직접 호출 (서울 → 지역 제한 없음)
+    const raw = await runOcr(cfg, images);
+    // 3) 서버에서 정규화·교차검증
+    const j = await post("/ocr-normalize", { raw });
     fill(j.fields, j.warnings);
     go(2);
   } catch (e) {
     err.textContent = "인식 실패: " + e.message;
   } finally { btn.disabled = false; btn.textContent = "인식하기"; }
 });
+
+async function post(path, body) {
+  const r = await fetch(WORKER_BASE + path, { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ ...body, key: KEY }) });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || ("HTTP " + r.status));
+  return j;
+}
+
+async function runOcr(cfg, imgs) {
+  const list = ["biz","id","bank"].map(k => imgs[k]).filter(Boolean).map(d => { const m = /^data:(image\/[a-z]+);base64,(.+)$/i.exec(d); return { mime: m[1], data: m[2] }; });
+  let text;
+  if (cfg.provider === "anthropic") {
+    const content = list.map(i => ({ type:"image", source:{ type:"base64", media_type:i.mime, data:i.data } }));
+    content.push({ type:"text", text: cfg.prompt + "\n\nJSON 외의 텍스트는 출력하지 마라." });
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{ "content-type":"application/json", "x-api-key": cfg.apiKey, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+      body: JSON.stringify({ model: cfg.model, max_tokens: 1500, temperature: 0, messages:[{ role:"user", content }] }),
+    });
+    if (!r.ok) throw new Error("OCR API " + r.status + ": " + (await r.text()).slice(0, 200));
+    const d = await r.json();
+    text = (d.content || []).filter(c => c.type === "text").map(c => c.text).join("");
+  } else {
+    const parts = [{ text: cfg.prompt }, ...list.map(i => ({ inline_data:{ mime_type:i.mime, data:i.data } }))];
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent?key=${cfg.apiKey}`, {
+      method:"POST", headers:{ "content-type":"application/json" },
+      body: JSON.stringify({ contents:[{ parts }], generationConfig:{ response_mime_type:"application/json", temperature:0 } }),
+    });
+    if (!r.ok) throw new Error("OCR API " + r.status + ": " + (await r.text()).slice(0, 200));
+    const d = await r.json();
+    text = (d.candidates?.[0]?.content?.parts || []).map(p => p.text).join("");
+  }
+  try { return JSON.parse(text); } catch { const m = /\{[\s\S]*\}/.exec(text || ""); if (!m) throw new Error("OCR 결과를 해석할 수 없음"); return JSON.parse(m[0]); }
+}
+
 document.getElementById("skipOcr").addEventListener("click", () => { fill({}, ["자동 인식 없이 직접 입력 중입니다."]); go(2); });
 
 function fill(f, warnings) {

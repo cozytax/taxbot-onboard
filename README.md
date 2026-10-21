@@ -6,19 +6,14 @@ Tally 폼 대체. 직원이 고정 링크를 열어 고객이 보낸 사진 3장
 | 파일 | 배포 위치 |
 |---|---|
 | `index.html` | GitHub Pages — `https://cozytax.github.io/taxbot-onboard/` |
-| `worker.js` + `server.js` | **Railway** (Node) — GitHub 연동 자동 배포 |
-| `wrangler.toml` | Cloudflare Workers 용 (사용 안 함 — Workers 발신 IP가 Anthropic·Gemini 미지원 지역으로 잡혀 403/400) |
+| `worker.js` | Cloudflare Workers — GitHub 연동 자동 배포 |
+| `wrangler.toml` | Worker 설정 (시크릿 미포함) |
 
 기존 콩벤처스 Worker 코드는 건드리지 않음. `/register` `/agree-cms` `/agree-tax` `/excel` 을 그대로 호출.
 4대보험 위임장 3종은 명세에 없지만 `/agree-tax?...&type=health|goyong|yungum` 으로 생성됨(기존 메일 링크에서 확인).
 기존 Worker 주소(`TAXBOT_BASE`)는 무인증 GET API라 **코드·저장소에 넣지 않고 secret 으로만** 등록.
 
-## 배포 (Railway)
-1. railway.com → New Project → Deploy from GitHub repo → `cozytax/taxbot-onboard`
-2. Variables 에 아래 추가: `TAXBOT_BASE` `ANTHROPIC_API_KEY` `RESEND_API_KEY` `STAFF_KEY` `MAIL_FROM` `MAIL_TO` `CMS_PAYMM=12` `DEPOSIT_DATE=20` `OCR_MODEL=claude-sonnet-5-5`
-3. Settings → Networking → Generate Domain → 나온 주소를 `index.html` 의 `WORKER_BASE` 에 넣고 push
-
-## 배포 (Cloudflare Workers — 참고용, 현재 미사용)
+## 배포
 ```bash
 npm i -g wrangler
 wrangler login
@@ -43,7 +38,11 @@ wrangler deploy
 이체일 20일 고정(`DEPOSIT_DATE`).
 
 ## OCR 엔진
-Claude API(`ANTHROPIC_API_KEY`) 사용. Gemini는 Cloudflare Worker 발신 IP를 미지원 지역으로 판정해 400(FAILED_PRECONDITION)이 나서 제외. `GEMINI_API_KEY`만 있고 `ANTHROPIC_API_KEY`가 없으면 Gemini로 폴백.
+Cloudflare Worker 발신 IP가 Google·Anthropic 모두 미지원 지역으로 잡혀(400 FAILED_PRECONDITION / 403 forbidden) 서버에서는 호출이 안 됨.
+그래서 OCR 호출만 **직원 브라우저에서 직접** 함: 페이지가 `/ocr-config`(직원키 확인)로 API 키를 받아 Gemini/Anthropic을 호출하고, 결과를 `/ocr-normalize`로 보내 검증.
+- `ANTHROPIC_API_KEY` 있으면 Claude(`OCR_MODEL`, 기본 claude-sonnet-5-5), 없으면 `GEMINI_API_KEY`로 Gemini(`GEMINI_MODEL`, 기본 gemini-2.5-flash)
+- API 키가 직원 브라우저까지 내려가므로 키에 월 사용 한도를 걸어둘 것
+- `/ocr` 라우트(서버 직접 호출)는 다른 호스팅으로 옮길 때를 위해 남겨둠
 
 ## 개인정보 처리
 - 이미지는 `/ocr` 요청 처리 중 메모리에서만 쓰고 저장하지 않음

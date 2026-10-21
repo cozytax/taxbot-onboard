@@ -4,9 +4,11 @@
  * 내부용. 직원이 고정 링크(index.html?k=STAFF_KEY)를 열어 사용.
  *
  * 라우트
- *   POST /ocr     사업자등록증·신분증·통장사본 이미지 → JSON 추출 (이미지 저장 안 함)
+ *   POST /ocr-config     직원키 확인 → OCR 엔진 키·모델·프롬프트 반환 (브라우저가 API 직접 호출)
+ *   POST /ocr-normalize  브라우저가 받은 OCR 원문 JSON → 정규화·교차검증
+ *   POST /ocr            서버에서 직접 OCR (Cloudflare 에선 지역 제한으로 실패, 다른 호스팅용)
  *   POST /submit  확인된 데이터 → 기존 taxbot Worker API 호출(등록 + 서식 6종) → Resend 결과 메일
- *   두 라우트 모두 body.key === STAFF_KEY 필요
+ *   모든 라우트 body.key === STAFF_KEY 필요
  *
  * 환경변수(wrangler secret / vars)
  *   ANTHROPIC_API_KEY    OCR 엔진 (권장 — Cloudflare 에서 Gemini 는 지역 제한으로 실패)
@@ -76,6 +78,8 @@ export default {
 
     try {
       if (req.method === "POST" && url.pathname === "/ocr") return json(await ocr(await req.json(), env), cors);
+      if (req.method === "POST" && url.pathname === "/ocr-config") return json(ocrConfig(await req.json(), env), cors);
+      if (req.method === "POST" && url.pathname === "/ocr-normalize") return json(normalize((await (async (b) => (checkKey(b, env), b))(await req.json())).raw || {}), cors);
       if (req.method === "POST" && url.pathname === "/submit") return json(await submit(await req.json(), env), cors);
       return json({ ok: false, error: "not found" }, cors, 404);
     } catch (e) {
@@ -101,7 +105,19 @@ async function ocr(body, env) {
   const text = env.ANTHROPIC_API_KEY ? await ocrClaude(images, env) : await ocrGemini(images, env);
   const raw = safeJson(text);
 
-  // ---- 정규화 + 교차검증 ----
+  return normalize(raw);
+}
+
+/* 브라우저 직접 호출용: 직원키 확인 후 OCR 엔진 정보 반환 (Cloudflare 발신 IP 지역 제한 우회) */
+function ocrConfig(body, env) {
+  checkKey(body, env);
+  if (env.ANTHROPIC_API_KEY) return { ok: true, provider: "anthropic", apiKey: env.ANTHROPIC_API_KEY, model: env.OCR_MODEL || "claude-sonnet-5-5", prompt: OCR_PROMPT };
+  if (env.GEMINI_API_KEY) return { ok: true, provider: "gemini", apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL || "gemini-2.5-flash", prompt: OCR_PROMPT };
+  throw new Error("OCR API 키가 설정되지 않았습니다");
+}
+
+/* OCR 원문 JSON → 정규화 + 교차검증 */
+function normalize(raw) {
   const biz = raw.biz || {}, id = raw.id || {}, bank = raw.bank || {};
   const bizNoD = digits(biz.bizNo);
   const mid = bizNoD.slice(3, 5);
