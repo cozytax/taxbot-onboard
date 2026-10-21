@@ -9,6 +9,8 @@
 <script src="vendor/html2canvas.min.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/fontkit.umd.min.js"></script>
 <style>
   :root { --ink:#1a1a1a; --sub:#6b6b6b; --line:#e5e5e5; --bg:#fafafa; --acc:#2d5bff; --warn:#b45309; --warnbg:#fff7ed; --err:#b91c1c; }
   * { box-sizing:border-box; }
@@ -326,6 +328,12 @@ async function buildDocs(office, c) {
     out.push({ ...doc, preview: jpg, dataUrl, mime, content: dataUrl.split(",")[1] });
   }
   R.innerHTML = "";
+  // 홈택스 신청서: 국세청 원본 서식 PDF(벡터)에 pdf-lib 로 값만 기입 → 선명도·서식 원본 그대로
+  try {
+    const b64 = await buildHometaxPdf(office, c, t);
+    const h = out.find(x => x.key === "hometax");
+    h.dataUrl = "data:application/pdf;base64," + b64; h.content = b64;
+  } catch (e) { console.warn("홈택스 PDF 원본서식 작성 실패, 이미지 PDF 사용:", e); }
   // 더빌 MEM 엑셀: 템플릿 .xls 읽어서 2행(키) 순서대로 4행에 값 추가
   const tpl = await fetch("assets/dbill_template.xls").then(r => { if (!r.ok) throw new Error("더빌 템플릿을 불러올 수 없음"); return r.arrayBuffer(); });
   const wb = XLSX.read(tpl, { type: "array" });
@@ -338,6 +346,39 @@ async function buildDocs(office, c) {
   const xlsB64 = XLSX.write(wb, { bookType: "xls", type: "base64" });
   out.push({ key:"excel", title:"더빌 MEM 엑셀", type:"xls", name:`MEM_${c.bizName}.xls`, mime:"application/vnd.ms-excel", dataUrl:"data:application/vnd.ms-excel;base64," + xlsB64, content: xlsB64 });
   return out;
+}
+
+async function buildHometaxPdf(o, c, t) {
+  const [tpl, fontBytes, sealC, sealO] = await Promise.all([
+    fetch("assets/hometax_base.pdf").then(r => r.arrayBuffer()),
+    fetch("vendor/NotoSansKR-sub.otf").then(r => r.arrayBuffer()),
+    fetch("assets/seal_client.png").then(r => r.arrayBuffer()),
+    fetch("assets/seal_office.png").then(r => r.arrayBuffer()),
+  ]);
+  const pdf = await PDFLib.PDFDocument.load(tpl);
+  pdf.registerFontkit(fontkit);
+  const font = await pdf.embedFont(fontBytes);
+  const imgC = await pdf.embedPng(sealC), imgO = await pdf.embedPng(sealO);
+  const page = pdf.getPage(0); const H = page.getHeight();
+  // 좌표: 원본 PDF pt, yTop 은 상단 기준 (pdftotext bbox 와 동일)
+  const T = (x, yTop, text, size = 10, w = 0) => {
+    text = String(text ?? ""); let xx = x;
+    if (w) xx = x + (w - font.widthOfTextAtSize(text, size)) / 2;
+    page.drawText(text, { x: xx, y: H - yTop - size * 0.88, size, font, color: PDFLib.rgb(0.07, 0.07, 0.07) });
+  };
+  const I = (img, x, yTop, w, h) => page.drawImage(img, { x, y: H - yTop - h, width: w, height: h, opacity: 0.9 });
+  const dd = (n) => String(n).padStart(2, "0");
+  T(195, 151.5, c.repName); T(400, 151.5, c.rrn);
+  T(195, 176, c.bizName); T(400, 176, c.bizNo);
+  T(380, 219.5, c.phone);
+  // 원본 PDF 에 "(서명 또는 인)"·"일" 글자는 그대로 남아 있으므로 값·도장만 얹음
+  T(366, 483.5, String(t.y), 10.5, 30); T(428, 483.5, dd(t.m), 10.5, 14); T(470, 483.5, dd(t.d), 10.5, 14);
+  T(372, 498.8, c.repName, 10.5, 100); I(imgC, 478, 476, 44.5, 44.5);
+  T(370, 587.7, c.repName, 10.5, 100); I(imgC, 478, 565, 44.5, 44.5);
+  T(435.8, 620.8, ": " + (o.repRrn || ""));
+  T(135, 728.2, c.repName, 10.5, 100); I(imgC, 216, 706, 40, 40);
+  I(imgO, 481, 696.5, 43, 40);
+  return await pdf.saveAsBase64();
 }
 
 function showDocs() {

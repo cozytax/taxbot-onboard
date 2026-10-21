@@ -6,7 +6,7 @@
 | 파일 | 형식 | 템플릿 |
 |---|---|---|
 | 자동이체 이용 신청서 (CMS) | JPG | `forms.js` → `cms()` |
-| 홈택스 세무대리정보 이용(해지)신청서 [별지 제6호] | PDF | `hometax()` — 국세청 제출용이라 원본 서식 PDF를 배경(`assets/hometax_bg.png`)으로 깔고 값만 좌표에 얹음 |
+| 홈택스 세무대리정보 이용(해지)신청서 [별지 제6호] | PDF | 국세청 제출용이라 **원본 서식 PDF(`assets/hometax_base.pdf`, 벡터)에 pdf-lib로 값·도장만 기입** (`index.html` → `buildHometaxPdf()`). 미리보기 썸네일만 `forms.js` `hometax()` 로 그림 |
 | 건강보험 EDI 업무대행 위임장 [별지 제6호] | PDF | `nhis()` |
 | 보험사무대행기관 사무위탁서 (고용·산재) | PDF | `goyong()` |
 | 국민연금 웹 EDI 업무대행 신청서 [별지 제4호] | PDF | `pension()` |

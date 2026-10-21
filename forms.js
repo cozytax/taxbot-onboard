@@ -48,11 +48,7 @@ window.FORMS = (() => {
     const { o, c, t } = d;
     return `
 <div class="page" style="font-size:10.5px;padding:34px 40px;">
-  <div style="display:flex;align-items:center;justify-content:space-between;">
-    <img src="${o.logoUrl}" style="height:34px;">
-    <div style="flex:1;text-align:center;font-size:20px;font-weight:700;letter-spacing:3px;">자동이체 이용 신청서</div>
-    <div style="width:140px;"></div>
-  </div>
+  <div style="text-align:center;font-size:20px;font-weight:700;letter-spacing:3px;padding-top:6px;">자동이체 이용 신청서</div>
   <div class="c" style="margin:6px 0 4px;"><span style="background:#fff27a;padding:1px 6px;font-weight:700;">(신청 구분(택1): <u>신규</u>/ 변경/ 해지)</span></div>
   <div class="c" style="font-weight:700;margin-bottom:3px;">◈ 수납기관 및 요금정보[수납기관 기재란]</div>
   <table>
