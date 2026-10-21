@@ -4,13 +4,13 @@ compatibility_date = "2026-01-01"
 
 [vars]
 ALLOWED_ORIGIN = "https://cozytax.github.io"
-GEMINI_MODEL = "gemini-2.5-flash"
+OCR_MODEL = "claude-sonnet-5-5"
 CMS_PAYMM = "12"
 DEPOSIT_DATE = "20"
 
 # secrets (wrangler secret put) — 저장소에 절대 커밋하지 말 것:
 #   TAXBOT_BASE      기존 taxbot Worker 주소 (무인증 GET API라 공개 금지)
-#   GEMINI_API_KEY
+#   ANTHROPIC_API_KEY  console.anthropic.com → API Keys (OCR 엔진)
 #   STAFF_KEY        직원 접근 키 (페이지 주소 뒤 ?k= 값)
 #   RESEND_API_KEY   resend.com API 키
 #   MAIL_FROM        발신 주소 (도메인 인증 전: onboarding@resend.dev)

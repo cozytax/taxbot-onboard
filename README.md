@@ -18,7 +18,7 @@ Tally 폼 대체. 직원이 고정 링크를 열어 고객이 보낸 사진 3장
 npm i -g wrangler
 wrangler login
 wrangler secret put TAXBOT_BASE      # https://taxbot.kongventures.workers.dev
-wrangler secret put GEMINI_API_KEY
+wrangler secret put ANTHROPIC_API_KEY # console.anthropic.com → API Keys
 wrangler secret put STAFF_KEY        # 직원 접근 키 (아무 문자열)
 wrangler secret put RESEND_API_KEY   # resend.com → API Keys
 wrangler deploy
@@ -37,6 +37,9 @@ wrangler deploy
 
 이체일 20일 고정(`DEPOSIT_DATE`).
 
+## OCR 엔진
+Claude API(`ANTHROPIC_API_KEY`) 사용. Gemini는 Cloudflare Worker 발신 IP를 미지원 지역으로 판정해 400(FAILED_PRECONDITION)이 나서 제외. `GEMINI_API_KEY`만 있고 `ANTHROPIC_API_KEY`가 없으면 Gemini로 폴백.
+
 ## 개인정보 처리
 - 이미지는 `/ocr` 요청 처리 중 메모리에서만 쓰고 저장하지 않음
 - `/ocr` `/submit` 모두 `STAFF_KEY` 없이는 동작 안 함
@@ -47,7 +50,6 @@ wrangler deploy
 |---|---|---|
 | 홈택스 ID/PW 전달 경로 | 기존 API 어디에도 없음 → 메일 본문에만 포함 | submit() |
 | `/register` 응답 형식 | HTML/텍스트로 가정, 메일에 앞 500자 표시 | callText() |
-| Gemini 모델명 | `gemini-2.5-flash` — 사용 가능 모델로 교체 | env `GEMINI_MODEL` |
 | 운전면허증 | 프롬프트는 주민등록증 기준 | OCR_PROMPT |
 
 ## 검증 로직 (경고만, 제출 차단 안 함)

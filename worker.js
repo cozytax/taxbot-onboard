@@ -9,7 +9,9 @@
  *   두 라우트 모두 body.key === STAFF_KEY 필요
  *
  * 환경변수(wrangler secret / vars)
- *   GEMINI_API_KEY, GEMINI_MODEL(기본 gemini-2.5-flash)
+ *   ANTHROPIC_API_KEY    OCR 엔진 (권장 — Cloudflare 에서 Gemini 는 지역 제한으로 실패)
+ *   OCR_MODEL            기본 claude-sonnet-5-5
+ *   GEMINI_API_KEY, GEMINI_MODEL  ANTHROPIC_API_KEY 없을 때만 사용
  *   TAXBOT_BASE          기존 Worker 주소 — secret 으로 등록 (공개 저장소에 올리지 말 것)
  *   STAFF_KEY            직원 접근 키 (링크의 ?k= 값)
  *   RESEND_API_KEY       resend.com API 키
@@ -88,28 +90,15 @@ async function ocr(body, env) {
   const imgs = ["biz", "id", "bank"].map((k) => body?.images?.[k]).filter(Boolean);
   if (imgs.length < 1) throw new Error("이미지가 없습니다");
 
-  const parts = [{ text: OCR_PROMPT }];
+  const images = [];
   for (const dataUrl of imgs) {
     const m = /^data:(image\/[a-z]+);base64,(.+)$/i.exec(dataUrl);
     if (!m) throw new Error("이미지 형식 오류 (dataURL 필요)");
-    parts.push({ inline_data: { mime_type: m[1], data: m[2] } });
+    images.push({ mime: m[1], data: m[2] });
   }
 
-  const model = env.GEMINI_MODEL || "gemini-2.5-flash";
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: { response_mime_type: "application/json", temperature: 0 },
-      }),
-    }
-  );
-  if (!r.ok) throw new Error(`OCR API ${r.status}: ${(await r.text()).slice(0, 300)}`);
-  const data = await r.json();
-  const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") || "{}";
+  // OCR 엔진: ANTHROPIC_API_KEY 가 있으면 Claude, 없으면 Gemini
+  const text = env.ANTHROPIC_API_KEY ? await ocrClaude(images, env) : await ocrGemini(images, env);
   const raw = safeJson(text);
 
   // ---- 정규화 + 교차검증 ----
@@ -155,6 +144,33 @@ async function ocr(body, env) {
     },
     warnings,
   };
+}
+
+async function ocrClaude(images, env) {
+  const model = env.OCR_MODEL || "claude-sonnet-5-5";
+  const content = images.map((i) => ({ type: "image", source: { type: "base64", media_type: i.mime, data: i.data } }));
+  content.push({ type: "text", text: OCR_PROMPT + "\n\nJSON 외의 텍스트는 출력하지 마라." });
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model, max_tokens: 1500, temperature: 0, messages: [{ role: "user", content }] }),
+  });
+  if (!r.ok) throw new Error(`OCR API ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  const data = await r.json();
+  return (data?.content || []).filter((c) => c.type === "text").map((c) => c.text).join("") || "{}";
+}
+
+async function ocrGemini(images, env) {
+  const model = env.GEMINI_MODEL || "gemini-2.5-flash";
+  const parts = [{ text: OCR_PROMPT }, ...images.map((i) => ({ inline_data: { mime_type: i.mime, data: i.data } }))];
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`,
+    { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts }], generationConfig: { response_mime_type: "application/json", temperature: 0 } }) }
+  );
+  if (!r.ok) throw new Error(`OCR API ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  const data = await r.json();
+  return data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") || "{}";
 }
 
 /* ---------- /submit ---------- */
