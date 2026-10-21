@@ -376,7 +376,7 @@ window.FORMS = (() => {
   <div>위 사실을 증명하기 위해 본 계약서를 2통 작성하여 “甲”과 “乙”이 각각 1통씩 소지한다</div>
   <div class="c" style="margin:36px 0 26px;font-size:13px;">${t.y}. &nbsp;&nbsp;&nbsp; ${t.m}. &nbsp;&nbsp;&nbsp; ${t.d}.</div>
   <div style="display:flex;justify-content:space-around;font-size:13px;line-height:2.4;">
-    <div style="text-align:center;">위임인(甲)<br>“ ${esc(c.bizName)} ”<br>대표 &nbsp;&nbsp;<span style="display:inline-block;min-width:90px;border-bottom:1px solid #999;">&nbsp;</span> &nbsp;(인)</div>
+    <div style="text-align:center;">위임인(甲)<br>“ ${esc(c.bizName)} ”<br>대표 &nbsp;&nbsp;<span style="display:inline-block;min-width:90px;">${esc(c.repName)}</span> &nbsp;(인)</div>
     <div style="text-align:center;">수임인(乙)<br>“편한세무회계”<br>대표 &nbsp;&nbsp;<span style="display:inline-block;min-width:90px;">편 성 웅</span> &nbsp;${signO("(인)")}</div>
   </div>
 </div>`;

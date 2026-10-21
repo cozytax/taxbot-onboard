@@ -381,13 +381,13 @@ async function buildDocs(office, c) {
 async function buildHometaxPdf(o, c, t) {
   const [tpl, fontBytes, sealC, sealO] = await Promise.all([
     fetch("assets/hometax_base.pdf").then(r => r.arrayBuffer()),
-    fetch("vendor/NotoSansKR-sub.otf").then(r => r.arrayBuffer()),
+    fetch("vendor/NotoSansKR-sub.ttf").then(r => r.arrayBuffer()),
     fetch("assets/seal_client.png").then(r => r.arrayBuffer()),
     fetch("assets/seal_office.png").then(r => r.arrayBuffer()),
   ]);
   const pdf = await PDFLib.PDFDocument.load(tpl);
   pdf.registerFontkit(fontkit);
-  const font = await pdf.embedFont(fontBytes);
+  const font = await pdf.embedFont(fontBytes); // subset 옵션은 이 폰트에서 글리프 누락 발생 → 전체 임베드
   const imgC = await pdf.embedPng(sealC), imgO = await pdf.embedPng(sealO);
   const page = pdf.getPage(0); const H = page.getHeight();
   // 좌표: 원본 PDF pt, yTop 은 상단 기준 (pdftotext bbox 와 동일)
