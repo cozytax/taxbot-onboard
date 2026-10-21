@@ -5,7 +5,7 @@
  *
  * 라우트
  *   POST /ocr     사업자등록증·신분증·통장사본 이미지 → JSON 추출 (이미지 저장 안 함)
- *   POST /submit  확인된 데이터 → 기존 taxbot Worker 4개 API 호출 → Postmark 결과 메일
+ *   POST /submit  확인된 데이터 → 기존 taxbot Worker API 호출(등록 + 서식 6종) → Resend 결과 메일
  *   두 라우트 모두 body.key === STAFF_KEY 필요
  *
  * 환경변수(wrangler secret / vars)
@@ -199,6 +199,15 @@ async function submit(p, env) {
     agreeTax: `${base}/agree-tax?` + qs({
       repName: p.repName, rsdntRgnmb: rrn, corpName: p.bizName, bizNum: fmtBizNo(bizNoD), phone: ph.join("-"),
     }),
+    // 4대보험 위임장 3종 — 같은 /agree-tax 에 type 만 다름 (기존 메일 링크에서 확인)
+    ...Object.fromEntries(["health", "goyong", "yungum"].map((t) => [t, `${base}/agree-tax?` + qs({
+      rep_name: p.repName, biz_name: p.bizName,
+      address: p.bizAddress || "주소 미입력",
+      phone_num: ph.join("-"), reg_num: bizNoD,
+      inc_num: bizType === "02" && digits(p.corpRegNo).length === 13 ? digits(p.corpRegNo) : digits(rrn),
+      rep_dob: `${rrn.slice(0, 2)}.${rrn.slice(2, 4)}.${rrn.slice(4, 6)}`,
+      year: now.y, month: now.m, day: now.d, type: t,
+    })])),
     excel: `${base}/excel?` + qs({
       membername: p.repName,            // 더빌 회원명 = 대표자명 (기존 산출물 확인)
       hpno: phoneD, bankcd: bankCd, accountno: digits(p.accountNumber), accountname: p.accountHolder,
@@ -217,6 +226,9 @@ async function submit(p, env) {
     ["agreeCms", "CMS자동이체신청서.jpg", "image/jpeg"],
     ["agreeTax", "세무대리정보이용신청서.pdf", "application/pdf"],
     ["excel", "MEM_더빌업로드.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+    ["health", "건강보험EDI위임장.pdf", "application/pdf"],
+    ["goyong", "고용산재위임장.pdf", "application/pdf"],
+    ["yungum", "국민연금위임장.pdf", "application/pdf"],
   ];
   const settled = await Promise.allSettled(fileJobs.map(([k]) => fetch(calls[k])));
   for (let i = 0; i < fileJobs.length; i++) {
@@ -249,6 +261,7 @@ async function submit(p, env) {
     <table>
       ${row("택스봇·홈택스 등록", esc(results.register).slice(0, 500))}
       ${row("CMS 신청서", results.agreeCms)}${row("세무대리 신청서", results.agreeTax)}${row("MEM 엑셀", results.excel)}
+      ${row("건강보험 EDI 위임장", results.health)}${row("고용산재 위임장", results.goyong)}${row("국민연금 위임장", results.yungum)}
     </table>
     <p style="color:#999;font-size:12px">제출 ${now.y}-${now.m}-${now.d} ${now.hm} KST · 자동 생성 메일</p>`;
 

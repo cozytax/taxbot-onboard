@@ -10,6 +10,7 @@ Tally 폼 대체. 직원이 고정 링크를 열어 고객이 보낸 사진 3장
 | `wrangler.toml` | Worker 설정 (시크릿 미포함) |
 
 기존 콩벤처스 Worker 코드는 건드리지 않음. `/register` `/agree-cms` `/agree-tax` `/excel` 을 그대로 호출.
+4대보험 위임장 3종은 명세에 없지만 `/agree-tax?...&type=health|goyong|yungum` 으로 생성됨(기존 메일 링크에서 확인).
 기존 Worker 주소(`TAXBOT_BASE`)는 무인증 GET API라 **코드·저장소에 넣지 않고 secret 으로만** 등록.
 
 ## 배포
@@ -32,7 +33,7 @@ wrangler deploy
 1. `https://cozytax.github.io/taxbot-onboard/?k=STAFF_KEY` 접속 (한 번 열면 브라우저에 키 저장, 이후 `?k=` 없이도 됨)
 2. 사진 3장 업로드 → 인식하기
 3. 인식값 확인·수정, 기장료·이체시작월·고객 휴대폰·이메일·홈택스 ID/PW 입력 → 제출
-4. MAIL_TO 로 결과 메일 도착 (첨부: CMS신청서 jpg·세무대리신청서 pdf·MEM 엑셀 + 택스봇 등록 응답)
+4. MAIL_TO 로 결과 메일 도착 (첨부 6종: CMS신청서 jpg·세무대리신청서 pdf·MEM 엑셀·건강보험EDI/고용산재/국민연금 위임장 pdf + 택스봇 등록 응답)
 
 이체일 20일 고정(`DEPOSIT_DATE`).
 
@@ -45,7 +46,6 @@ wrangler deploy
 | 항목 | 가정 | 위치 |
 |---|---|---|
 | 홈택스 ID/PW 전달 경로 | 기존 API 어디에도 없음 → 메일 본문에만 포함 | submit() |
-| 4대보험 위임장 3종 (건강보험 EDI·고용산재·국민연금) | 기존 메일에는 포함되나 API 명세에 없음 → 엔드포인트 확인 후 추가 예정 | submit() |
 | `/register` 응답 형식 | HTML/텍스트로 가정, 메일에 앞 500자 표시 | callText() |
 | Gemini 모델명 | `gemini-2.5-flash` — 사용 가능 모델로 교체 | env `GEMINI_MODEL` |
 | 운전면허증 | 프롬프트는 주민등록증 기준 | OCR_PROMPT |
