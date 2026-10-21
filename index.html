@@ -52,7 +52,7 @@
 <body>
 <div class="wrap">
   <h1>수임 등록 <span style="font-size:13px;color:var(--sub);font-weight:400">내부용</span></h1>
-  <p class="lead">고객이 보낸 사진 3장을 올리면 자동으로 채워짐. 확인·보완 후 서류 6종 생성 → 메일 발송.</p>
+  <p class="lead">고객이 보낸 사진 3장을 올리면 자동으로 채워짐. 확인·보완 후 서류 7종 생성 → 메일 발송.</p>
 
   <div id="invalid" class="card" style="display:none">
     <h2>접근 키 필요</h2>
@@ -132,7 +132,7 @@
           <div><label>홈택스 비밀번호</label><input name="hometaxPw"></div>
         </div>
         <div class="hint">홈택스 정보는 서류에 안 들어가고 결과 메일에만 적힘.</div>
-        <button class="primary" id="btnGen" type="submit">서류 6종 생성</button>
+        <button class="primary" id="btnGen" type="submit">서류 7종 생성</button>
         <div class="err" id="err2"></div>
       </div>
     </form>
@@ -154,7 +154,7 @@
   <div class="step" id="s4">
     <div class="card done">
       <h2>발송 완료</h2>
-      <p class="hint" id="doneMsg">결과 메일에 서류 6종이 첨부됐습니다.</p>
+      <p class="hint" id="doneMsg">결과 메일에 서류 7종이 첨부됐습니다.</p>
       <button class="primary" onclick="location.reload()">다음 업체 등록</button>
     </div>
   </div>
@@ -293,7 +293,7 @@ document.getElementById("f").addEventListener("submit", async (ev) => {
     FILES = await buildDocs(cfg.office, c);
     showDocs(); go(3);
   } catch (e) { err.textContent = "생성 실패: " + e.message; }
-  finally { btn.disabled = false; btn.textContent = "서류 6종 생성"; }
+  finally { btn.disabled = false; btn.textContent = "서류 7종 생성"; }
 });
 document.getElementById("btnBack").addEventListener("click", () => go(2));
 
@@ -312,20 +312,25 @@ async function buildDocs(office, c) {
     { key:"nhis", title:"건강보험 EDI 위임장", type:"pdf", html: FORMS.nhis(d), name:`${c.bizName}_건강보험EDI위임장.pdf` },
     { key:"goyong", title:"고용·산재 사무위탁서", type:"pdf", html: FORMS.goyong(d), name:`${c.bizName}_고용산재위임장.pdf` },
     { key:"pension", title:"국민연금 EDI 신청서", type:"pdf", html: FORMS.pension(d), name:`${c.bizName}_국민연금위임장.pdf` },
+    { key:"contract", title:"기장대리 계약서", type:"pdf", html: FORMS.contract(d), name:`${c.bizName}_기장대리계약서.pdf` },
   ];
   const out = [];
   for (const doc of docs) {
-    R.innerHTML = doc.html;
-    await Promise.all([...R.querySelectorAll("img")].map(img => img.complete ? null : new Promise(res => { img.onload = img.onerror = res; })));
-    const canvas = await html2canvas(R.firstElementChild, { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false });
-    const jpg = canvas.toDataURL("image/jpeg", 0.9);
-    let dataUrl = jpg, mime = "image/jpeg";
+    const pages = Array.isArray(doc.html) ? doc.html : [doc.html];
+    const jpgs = [];
+    for (const html of pages) {
+      R.innerHTML = html;
+      await Promise.all([...R.querySelectorAll("img")].map(img => img.complete ? null : new Promise(res => { img.onload = img.onerror = res; })));
+      const canvas = await html2canvas(R.firstElementChild, { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false });
+      jpgs.push(canvas.toDataURL("image/jpeg", 0.9));
+    }
+    let dataUrl = jpgs[0], mime = "image/jpeg";
     if (doc.type === "pdf") {
       const pdf = new jspdf.jsPDF({ unit: "mm", format: "a4", compress: true });
-      pdf.addImage(jpg, "JPEG", 0, 0, 210, 297);
+      jpgs.forEach((j, i) => { if (i) pdf.addPage(); pdf.addImage(j, "JPEG", 0, 0, 210, 297); });
       dataUrl = pdf.output("datauristring"); mime = "application/pdf";
     }
-    out.push({ ...doc, preview: jpg, dataUrl, mime, content: dataUrl.split(",")[1] });
+    out.push({ ...doc, preview: jpgs[0], dataUrl, mime, content: dataUrl.split(",")[1] });
   }
   R.innerHTML = "";
   // 홈택스 신청서: 국세청 원본 서식 PDF(벡터)에 pdf-lib 로 값만 기입 → 선명도·서식 원본 그대로

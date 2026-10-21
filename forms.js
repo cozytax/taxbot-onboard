@@ -281,5 +281,96 @@ window.FORMS = (() => {
     };
   }
 
-  return { CSS, cms, hometax, nhis, goyong, pension, excelRow };
+
+  /* ---------- 7. 기장대리 계약서 (PDF, 4쪽) — 채울 수 있는 칸만 기입, 甲 서명란은 공란, 乙은 직인 ---------- */
+  function contract(d) {
+    const { o, c, t } = d;
+    const corp = c.bizType === "02";
+    const box = (on) => `<span class="chk${on ? " on" : ""}"></span>`;
+    const feeRows = [["3억 미만","100,000","150,000"],["3억 ~ 5억 미만","120,000","180,000"],["5억 ~ 10억 미만","150,000","200,000"],["10억 ~ 15억 미만","200,000","250,000"],["15억 ~ 20억 미만","250,000","300,000"],["20억 ~30억 미만","330,000","400,000"],["30억 ~ 50억 미만","450,000","500,000"],["50억 ~ 100억 미만","650,000","750,000"]];
+    const adjRows = [["1억 미만","300,000원","500,000원"],["1억 ~ 3억 미만","300,000원 + 1억원 초과금액 × 0.20%","500,000원 + 1억원 초과금액 × 0.25%"],["3억 ~ 5억 미만","700,000원 + 3억원 초과금액 × 0.15%","1,000,000원 + 3억원 초과금액 × 0.25%"],["5억 ~ 10억 미만","1,000,000원 + 5억원 초과금액 × 0.12%","1,500,000원 + 5억원 초과금액 × 0.20%"],["10억 ~ 20억 미만","1,600,000원 + 10억원 초과금액 × 0.10%","2,500,000원 + 10억원 초과금액 × 0.15%"],["20억 ~30억 미만","2,600,000원 + 20억원 초과금액 × 0.08%","4,000,000원 + 20억원 초과금액 × 0.13%"],["30억 ~ 50억 미만","3,400,000원 + 30억원 초과금액 × 0.06%","5,300,000원 + 30억원 초과금액 × 0.08%"],["50억 이상","별도 합의","별도 합의"]];
+    const H = `.page.ct { font-size:12px; line-height:1.7; padding:60px 64px; } .page.ct h3 { font-size:14px; margin:18px 0 6px; } .page.ct th { background:#0c477e; color:#fff; font-weight:500; } .page.ct td.l { background:#f1f1f1; text-align:center; }`;
+    const p1 = `
+<div class="page ct" style="position:relative;">
+  <style>${H}</style>
+  <div style="font-size:30px;font-weight:700;margin-top:30px;">편한세무회계</div>
+  <div style="font-size:30px;font-weight:700;margin-top:10px;">기장대리 계약서</div>
+  <div style="position:absolute;top:360px;left:0;right:0;text-align:center;font-size:12.5px;font-weight:700;line-height:1.9;">
+    카카오톡 : 편한세무회계<br>${esc(o.address)}<br>T: 02)6268-2000 &nbsp;&nbsp;&nbsp; F: 02)591-0720 &nbsp;&nbsp;&nbsp;E: cozytax@naver.com
+  </div>
+  <img src="${o.logoUrl}" style="position:absolute;left:64px;bottom:120px;width:300px;">
+</div>`;
+    const p2 = `
+<div class="page ct">
+  <style>${H}</style>
+  <h3 style="font-size:18px;margin-top:0;">계약 체결</h3>
+  <div>의뢰인 “ <b>${esc(c.bizName)}</b> ”을 “甲”이라 하고 “편한세무회계”를 “乙”이라 하여 다음과 같이 계약한다.</div>
+  <h3 style="font-size:16px;">기본정보 항목</h3>
+  <table style="font-size:11.5px;">
+    <tr><th style="width:17%">구분</th><th colspan="2" style="width:48%">내용</th><th>비고</th></tr>
+    <tr><td class="l">상 &nbsp;&nbsp; 호</td><td colspan="2">${esc(c.bizName)}</td><td></td></tr>
+    <tr><td class="l">사업자등록번호</td><td colspan="2">${esc(c.bizNo)}</td><td>법인등록번호 : ${corp ? esc(c.corpRegNo || "") : ""}</td></tr>
+    <tr><td class="l">주 &nbsp;&nbsp; 소</td><td colspan="2">${esc(c.bizAddress || "")}</td><td>임차료( &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ) + Vat.( &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; )</td></tr>
+    <tr><td class="l">대 표 자</td><td colspan="2">${esc(c.repName)}</td><td></td></tr>
+    <tr><td class="l">연 락 처</td><td colspan="2">${esc(c.phone)}</td><td>실무자 :</td></tr>
+    <tr><td class="l">이 메 일</td><td colspan="2">${esc(c.email || "")}</td><td></td></tr>
+    <tr><td class="l">前 세무사</td><td colspan="2" class="c">${box(false)} 여 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${box(false)} 부</td><td>연락처 :</td></tr>
+    <tr><td class="l">사업용/개인용 카드</td><td colspan="2">( &nbsp;&nbsp;&nbsp;&nbsp; )장/ ( &nbsp;&nbsp;&nbsp;&nbsp; )장</td><td></td></tr>
+    <tr><td class="l" rowspan="3">인력현황</td><td class="l" style="width:16%">4대 보험</td><td>( &nbsp;&nbsp;&nbsp;&nbsp; )명</td><td></td></tr>
+    <tr><td class="l">프리랜서</td><td>( &nbsp;&nbsp;&nbsp;&nbsp; )명</td><td></td></tr>
+    <tr><td class="l">일용직</td><td>( &nbsp;&nbsp;&nbsp;&nbsp; )명</td><td></td></tr>
+    <tr><td class="l">사업용 차량 소유</td><td colspan="2" class="c">${box(false)} 여 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${box(false)} 부</td><td></td></tr>
+    <tr><td class="l">홈택스</td><td colspan="2">ID : ${esc(c.hometaxId || "")}</td><td>PW : ${esc(c.hometaxPw || "")}</td></tr>
+    <tr><td class="l" rowspan="3">CMS</td><td class="l">예금주명</td><td>${esc(c.accountHolder || "")}</td><td></td></tr>
+    <tr><td class="l">은행명</td><td>${esc(c.bankName || "")}${c.bankName ? "은행" : ""}</td><td></td></tr>
+    <tr><td class="l">계좌번호</td><td>${esc(c.accountNumber || "")}</td><td></td></tr>
+    <tr><td class="l">법인설립지원</td><td colspan="2" class="c">${box(false)} 여 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${box(false)} 부</td><td class="tiny">법인설립 지원은 12개월 기장 유지의무가 있으며 중도해지시 설립지원 수수료가 환수 됩니다.</td></tr>
+  </table>
+  <h3>제1조 【권한위임】</h3>
+  <div>① “甲”은 “乙”을 대리인으로 하여 “甲”의 아래 표시 사업장의 기장대리 대행에 대한 권한을 위임한다.</div>
+  <h3>제2조 【업무】</h3>
+  <div>① “乙”은 “甲”의 위 사업장에 대한 재무제표 및 세무조정계산서를 작성하며 이를 근거로 “甲”의 연간 소득에 대한 종합소득세(법인의 경우 법인세) 신고 업무를 수행하기로 한다.<br>② “乙”은 “甲”의 위 사업장에 대한 부가가치세 확정신고 대행 업무를 수행하기로 한다.</div>
+</div>`;
+    const p3 = `
+<div class="page ct">
+  <style>${H}</style>
+  <h3 style="margin-top:0;">제3조 【보수】</h3>
+  <div>① 본 계약에 의한 기장대리 보수는 <b>${c.start.slice(0, 4)}</b>년 <b>${c.start.slice(4, 6)}</b>월부터 매월 <b>${esc(o.depositDate)}</b>일에 월정액 금 <b>${Number(digits(c.amount)).toLocaleString()}원</b> 정 (VAT포함)으로 한다.<br>② 본 계약에 의한 신고 시 결산서 및 세무조정계산서 작성 수수료(조정료)는 전항의 보수와는 별도로 한다.</div>
+  <table style="font-size:11.5px;margin-top:12px;">
+    <tr><th style="width:30%">과세기간 매출</th><th>개인 기장료</th><th>법인 기장료</th></tr>
+    ${feeRows.map((r) => `<tr><td class="l">${r[0]}</td><td class="c">${r[1]}</td><td class="c">${r[2]}</td></tr>`).join("")}
+    <tr><td class="l">100억 이상</td><td colspan="2" class="c">별도 안내</td></tr>
+  </table>
+  <div style="margin:16px 0 6px;">[연 1회 : 일반 및 법인 사업자 조정 보수표]</div>
+  <table style="font-size:11px;">
+    <tr><th style="width:22%">과세기간 매출</th><th>개인 조정료</th><th>법인 조정료</th></tr>
+    ${adjRows.map((r) => `<tr><td class="l">${r[0]}</td><td class="c">${r[1]}</td><td class="c">${r[2]}</td></tr>`).join("")}
+  </table>
+  <div class="small" style="margin-top:8px;">* 전문직사업자, 외부회계감사대상법인의 경우 30% 범위 내에서 가산<br>* 업무량 및 난이도, 세액공제와 감면에 따라 30% 범위 내에서 가산</div>
+</div>`;
+    const p4 = `
+<div class="page ct" style="position:relative;">
+  <style>${H}</style>
+  <h3 style="margin-top:0;">제4조 【기간】</h3>
+  <div>① 본 계약의 유효기간은 계약일로부터 1년간으로 하고, 해약할 경우는 그 3개월 전에 상대방에게 통지하여야 한다. 다만 상호 통지가 없는 경우 본 계약은 계속 유효한 것으로 한다.<br>② “甲”이 해당 보수를 연체할 시에 “乙”은 “甲”에게 해당 사항을 통지하고 계약을 해지할 수 있다.</div>
+  <h3>제5조 【의무】</h3>
+  <div>“甲”은 본 계약의무 수행에 필요한 증빙자료 및 제반 서류를 신속 정확하게 “乙”에게 제공하여야 하며, “乙”은 “甲”이 제공한 자료에 의해 합리적이고 타당한 회계기준에 따라 성실하게 업무를 수행하여야 한다.</div>
+  <h3>제6조 【기밀의 보장】</h3>
+  <div>“乙”은 계약업무 수행 과정에서 “甲”의 기밀을 엄수하여야 한다.</div>
+  <h3>제7조 【해약의 책임】</h3>
+  <div>① “甲”의 사정에 의해 본 계약이 해지될 경우 해약 이후에 야기되는 세무처리에 대하여 “乙”은 그 책임을 지지 아니한다.<br>② “乙”의 사정에 의해 본 계약업무를 수행하지 못할 경우, “乙”은 그 시점까지 모든 업무를 정리하고 “甲”과 “乙”은 상호 협의하여 본 계약업무를 종결시키기로 한다.</div>
+  <h3>제8조 【기타】</h3>
+  <div>① “甲”이 제공한 자료의 불비 및 사실과 다른 자료의 제시 등의 사유로 본 계약업무 수행이 불가능할 경우에 발생하는 문제에 대하여, “乙”은 그 책임을 지지 아니한다. 이러한 경우에도 “甲”은 기장대리 보수월정액을 “乙”에게 지불하여야 한다.<br>② 천재지변 기타 이에 준하는 사유로 본 계약을 이행할 수 없을 때는 본 계약 불이행의 책임은 “甲”, “乙” 쌍방에게 없는 것으로 한다.<br>③ 본 계약에 명시하지 아니한 사항은 일반 관례에 따라 “甲”과 “乙”이 상호 합의하여 결정한다.</div>
+  <h3>제9조 【소지 의무】</h3>
+  <div>위 사실을 증명하기 위해 본 계약서를 2통 작성하여 “甲”과 “乙”이 각각 1통씩 소지한다</div>
+  <div class="c" style="margin:36px 0 26px;font-size:13px;">${t.y}. &nbsp;&nbsp;&nbsp; ${t.m}. &nbsp;&nbsp;&nbsp; ${t.d}.</div>
+  <div style="display:flex;justify-content:space-around;font-size:13px;line-height:2.4;">
+    <div style="text-align:center;">위임인(甲)<br>“ ${esc(c.bizName)} ”<br>대표 &nbsp;&nbsp;<span style="display:inline-block;min-width:90px;border-bottom:1px solid #999;">&nbsp;</span> &nbsp;(인)</div>
+    <div style="text-align:center;">수임인(乙)<br>“편한세무회계”<br>대표 &nbsp;&nbsp;<span style="display:inline-block;min-width:90px;">편 성 웅</span> &nbsp;${signO("(인)")}</div>
+  </div>
+</div>`;
+    return [p1, p2, p3, p4];
+  }
+
+  return { CSS, cms, hometax, nhis, goyong, pension, contract, excelRow };
 })();
