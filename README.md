@@ -1,64 +1,48 @@
-# taxbot-onboard — 신규 수임 등록 (내부용)
+# taxbot-onboard — 신규 수임 서류 자동 생성 (내부용)
 
-Tally 폼 대체. 직원이 고정 링크를 열어 고객이 보낸 사진 3장(사업자등록증·신분증·통장사본)을 올리면 OCR로 채워지고, 기장료·시작월·연락처·홈택스 정보만 입력 후 제출 → 기존 taxbot Worker API 4개 호출 → 결과 메일(첨부 3종).
+직원이 고정 링크를 열어 고객이 보낸 사진 3장(사업자등록증·신분증·통장사본)을 올리면 OCR로 채워지고, 기장료·시작월·연락처만 입력하면 서류 6종이 만들어져 사무실 메일로 발송됨. 콩벤처스 API 의존 없음 (택스봇·홈택스 수임요청은 하지 않음 — 수임동의는 직원이 홈택스에서 직접).
+
+## 만드는 서류 6종
+| 파일 | 형식 | 템플릿 |
+|---|---|---|
+| 자동이체 이용 신청서 (CMS) | JPG | `forms.js` → `cms()` |
+| 홈택스 세무대리정보 이용(해지)신청서 [별지 제6호] | PDF | `hometax()` |
+| 건강보험 EDI 업무대행 위임장 [별지 제6호] | PDF | `nhis()` |
+| 보험사무대행기관 사무위탁서 (고용·산재) | PDF | `goyong()` |
+| 국민연금 웹 EDI 업무대행 신청서 [별지 제4호] | PDF | `pension()` |
+| 더빌 MEM 엑셀 | XLS | `assets/dbill_template.xls` 에 4행 추가 (`excelRow()`) |
+
+문구·배치는 전부 `forms.js` 한 파일. 원본 HWP 문구를 그대로 옮겼고, 고객 날인은 이름 도장(원형), 사무실은 `assets/seal.png` 직인.
 
 ## 구성
-| 파일 | 배포 위치 |
-|---|---|
-| `index.html` | GitHub Pages — `https://cozytax.github.io/taxbot-onboard/` |
-| `worker.js` | Cloudflare Workers — GitHub 연동 자동 배포 |
-| `wrangler.toml` | Worker 설정 (시크릿 미포함) |
-
-기존 콩벤처스 Worker 코드는 건드리지 않음. `/register` `/agree-cms` `/agree-tax` `/excel` 을 그대로 호출.
-4대보험 위임장 3종은 명세에 없지만 `/agree-tax?...&type=health|goyong|yungum` 으로 생성됨(기존 메일 링크에서 확인).
-기존 Worker 주소(`TAXBOT_BASE`)는 무인증 GET API라 **코드·저장소에 넣지 않고 secret 으로만** 등록.
-
-## 배포
-```bash
-npm i -g wrangler
-wrangler login
-wrangler secret put TAXBOT_BASE      # https://taxbot.kongventures.workers.dev
-wrangler secret put ANTHROPIC_API_KEY # console.anthropic.com → API Keys
-wrangler secret put STAFF_KEY        # 직원 접근 키 (아무 문자열)
-wrangler secret put RESEND_API_KEY   # resend.com → API Keys
-wrangler deploy
-```
-`wrangler.toml` 의 `[vars]` 에 MAIL_FROM, MAIL_TO 확인.
-
-메일 발송은 Resend 사용: resend.com 가입 → Domains 에 `cozytax.co.kr` 추가하고 안내되는 DNS 레코드(SPF/DKIM) 등록 → API Keys 발급.
-도메인 인증 전에는 `MAIL_FROM = "onboarding@resend.dev"` 로 두면 가입한 본인 메일로만 테스트 발송 가능.
-`index.html` 상단 `WORKER_BASE` 를 배포된 Worker 주소로 교체 후 커밋 → GitHub Pages 자동 반영.
-
-## 사용 (직원)
-1. `https://cozytax.github.io/taxbot-onboard/?k=STAFF_KEY` 접속 (한 번 열면 브라우저에 키 저장, 이후 `?k=` 없이도 됨)
-2. 사진 3장 업로드 → 인식하기
-3. 인식값 확인·수정, 기장료·이체시작월·고객 휴대폰·이메일·홈택스 ID/PW 입력 → 제출
-4. MAIL_TO 로 결과 메일 도착 (첨부 6종: CMS신청서 jpg·세무대리신청서 pdf·MEM 엑셀·건강보험EDI/고용산재/국민연금 위임장 pdf + 택스봇 등록 응답)
-
-이체일 20일 고정(`DEPOSIT_DATE`).
-
-## OCR 엔진
-Cloudflare Worker 발신 IP가 Google·Anthropic 모두 미지원 지역으로 잡혀(400 FAILED_PRECONDITION / 403 forbidden) 서버에서는 호출이 안 됨.
-그래서 OCR 호출만 **직원 브라우저에서 직접** 함: 페이지가 `/ocr-config`(직원키 확인)로 API 키를 받아 Gemini/Anthropic을 호출하고, 결과를 `/ocr-normalize`로 보내 검증.
-- `ANTHROPIC_API_KEY` 있으면 Claude(`OCR_MODEL`, 기본 claude-sonnet-5-5), 없으면 `GEMINI_API_KEY`로 Gemini(`GEMINI_MODEL`, 기본 gemini-2.5-flash)
-- API 키가 직원 브라우저까지 내려가므로 키에 월 사용 한도를 걸어둘 것
-- `/ocr` 라우트(서버 직접 호출)는 다른 호스팅으로 옮길 때를 위해 남겨둠
-
-## 개인정보 처리
-- 이미지는 `/ocr` 요청 처리 중 메모리에서만 쓰고 저장하지 않음
-- `/ocr` `/submit` 모두 `STAFF_KEY` 없이는 동작 안 함
-- 주민번호·홈택스 ID/PW 가 결과 메일 본문에 포함됨 → 사무실 메일함 보안 전제
-
-## 확인 필요 (명세에 없어 가정한 값)
-| 항목 | 가정 | 위치 |
+| 파일 | 역할 | 배포 |
 |---|---|---|
-| 홈택스 ID/PW 전달 경로 | 기존 API 어디에도 없음 → 메일 본문에만 포함 | submit() |
-| `/register` 응답 형식 | HTML/텍스트로 가정, 메일에 앞 500자 표시 | callText() |
-| 운전면허증 | 프롬프트는 주민등록증 기준 | OCR_PROMPT |
+| `index.html` `forms.js` `assets/` `vendor/` | 화면·OCR 호출·서류 렌더링(html2canvas → JPG/PDF, SheetJS → XLS) | GitHub Pages `https://cozytax.github.io/taxbot-onboard/` |
+| `worker.js` | 직원키 확인·사무실 설정 전달·OCR 결과 검증·Resend 메일 발송 | Cloudflare Workers (GitHub 연동 자동 배포) |
 
-## 검증 로직 (경고만, 제출 차단 안 함)
-- 사업자번호 10자리 / 가운데 81~88 → 법인 자동 판정
-- 주민번호 검증숫자 (2020.10 이후 발급분은 불일치가 정상일 수 있음)
-- 사업자등록증 생년월일 ↔ 주민번호 앞 6자리
-- 대표자명 ↔ 신분증 성명 ↔ 예금주
-- 은행명 → 은행코드 매핑 실패
+## Cloudflare 변수 (Settings → Variables and Secrets)
+| Name | Type | 값 |
+|---|---|---|
+| `STAFF_KEY` | Secret | 직원 접근 키 (페이지 `?k=` 값) |
+| `ANTHROPIC_API_KEY` | Secret | OCR 엔진 (없으면 `GEMINI_API_KEY` 사용) |
+| `RESEND_API_KEY` | Secret | resend.com API 키 |
+| `MAIL_FROM` | Secret | 도메인 인증 전 `onboarding@resend.dev`, 인증 후 `onboard@cozytax.co.kr` |
+| `MAIL_TO` | Secret | 결과 수신 (쉼표로 여러 명) |
+| `OFFICE_JSON` | Secret | 사무실 정보 보정값. **대표자 주민번호는 여기에만**: `{"repRrn":"930510-1******"}` 형태. 다른 항목(name, rep, repBirth, bizNo, address, phone, mobile, taxAgentNo, depositDate, paymm)도 덮어쓰기 가능 |
+| `OCR_MODEL` | Variable | `claude-sonnet-5-5` (wrangler.toml) |
+| `ALLOWED_ORIGIN` | Variable | `https://cozytax.github.io` |
+
+## 사용
+1. `https://cozytax.github.io/taxbot-onboard/?k=STAFF_KEY` (한 번 열면 브라우저에 키 저장)
+2. 사진 3장 → 인식하기 → 값 확인·수정 → 기장료·이체시작월·휴대폰(·이메일·홈택스ID/PW) 입력 → **서류 6종 생성**
+3. 미리보기에서 각 파일 다운로드 가능 → **메일 보내기** → MAIL_TO 로 6종 첨부 발송
+4. 홈택스 수임동의 요청은 직원이 홈택스에서 직접
+
+## 동작 메모
+- OCR 호출은 **직원 브라우저에서 직접** (Cloudflare Worker 발신 IP가 Google·Anthropic 미지원 지역으로 잡혀 서버 호출 불가). Worker는 키 전달·결과 검증만.
+- 이미지는 서버 저장 없음. 주민번호·홈택스 ID/PW는 결과 메일 본문에 포함 → 메일함 보안 전제.
+- `assets/dbill_template.xls` 는 더빌에서 받은 원본. 셀 서식(노란색)은 SheetJS 저장 시 사라지고 값·헤더만 유지됨 — 더빌 업로드엔 영향 없음(확인 필요하면 첫 업로드 때 체크).
+- 사업장관리번호는 사업자번호+`-0` (기존 관행).
+
+## 검증 로직 (경고만)
+사업자번호 10자리·법인 판정(가운데 81~88) / 주민번호 검증숫자 / 생년월일↔주민번호 / 대표자명↔신분증↔예금주 / 은행코드 매핑
