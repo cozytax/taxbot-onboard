@@ -65,15 +65,16 @@
     <div class="card">
       <h2>1. 서류 사진 업로드</h2>
       <p class="hint">사진은 인식 후 즉시 폐기되며 서버에 저장되지 않음.</p>
-      <label>사업자등록증</label>
-      <div class="upload"><input type="file" accept="image/*" data-k="biz"><span>클릭하여 선택</span></div>
-      <label>대표자 신분증 (주민등록증 / 운전면허증)</label>
-      <div class="upload"><input type="file" accept="image/*" data-k="id"><span>클릭하여 선택</span></div>
-      <label>통장사본 (계좌확인서)</label>
-      <div class="upload"><input type="file" accept="image/*" data-k="bank"><span>클릭하여 선택</span></div>
+      <label style="display:flex;justify-content:space-between;align-items:center;">사업자등록증<span style="font-size:12px;color:var(--sub);font-weight:400;"><input type="checkbox" class="skip" data-k="biz" style="width:auto;vertical-align:-2px;margin-right:4px;">못 받음 (직접 입력)</span></label>
+      <div class="upload" id="u-biz"><input type="file" accept="image/*" data-k="biz"><span>클릭하여 선택</span></div>
+      <label style="display:flex;justify-content:space-between;align-items:center;">대표자 신분증 (주민등록증 / 운전면허증)<span style="font-size:12px;color:var(--sub);font-weight:400;"><input type="checkbox" class="skip" data-k="id" style="width:auto;vertical-align:-2px;margin-right:4px;">못 받음 (직접 입력)</span></label>
+      <div class="upload" id="u-id"><input type="file" accept="image/*" data-k="id"><span>클릭하여 선택</span></div>
+      <label style="display:flex;justify-content:space-between;align-items:center;">통장사본 (계좌확인서)<span style="font-size:12px;color:var(--sub);font-weight:400;"><input type="checkbox" class="skip" data-k="bank" style="width:auto;vertical-align:-2px;margin-right:4px;">못 받음 (직접 입력)</span></label>
+      <div class="upload" id="u-bank"><input type="file" accept="image/*" data-k="bank"><span>클릭하여 선택</span></div>
       <button class="primary" id="btnOcr" disabled>인식하기</button>
+      <div class="hint" style="margin-top:6px;">체크한 서류는 인식에서 빼고 2단계에서 직접 입력.</div>
       <div class="err" id="err1"></div>
-      <button class="link" id="skipOcr">사진 없이 직접 입력</button>
+      <button class="link" id="skipOcr">사진 없이 전부 직접 입력</button>
     </div>
   </div>
 
@@ -207,9 +208,24 @@ document.querySelectorAll(".upload input").forEach(inp => {
     box.classList.add("done"); box.querySelector("span").textContent = f.name;
     let img = box.querySelector("img"); if (!img) { img = document.createElement("img"); box.appendChild(img); }
     img.src = dataUrl;
-    document.getElementById("btnOcr").disabled = !(images.biz || images.id || images.bank);
+    refreshOcrBtn();
   });
 });
+const SKIP = {};
+document.querySelectorAll("input.skip").forEach(cb => cb.addEventListener("change", () => {
+  SKIP[cb.dataset.k] = cb.checked;
+  const box = document.getElementById("u-" + cb.dataset.k);
+  box.style.opacity = cb.checked ? ".35" : ""; box.style.pointerEvents = cb.checked ? "none" : "";
+  refreshOcrBtn();
+}));
+function refreshOcrBtn() {
+  const keys = ["biz","id","bank"];
+  const provided = keys.filter(k => images[k] && !SKIP[k]);
+  const allSkipped = keys.every(k => SKIP[k]);
+  const btn = document.getElementById("btnOcr");
+  btn.disabled = !(provided.length || allSkipped);
+  btn.textContent = allSkipped ? "직접 입력으로 진행" : "인식하기";
+}
 function shrink(file, max) {
   return new Promise((res, rej) => {
     const img = new Image(); const url = URL.createObjectURL(file);
@@ -229,20 +245,29 @@ document.getElementById("btnOcr").addEventListener("click", async () => {
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>인식 중 (10~20초)'; err.textContent = "";
   try {
     const cfg = await loadConfig();
-    const raw = await runOcr(cfg.ocr, images);
+    const keys = ["biz","id","bank"].filter(k => images[k] && !SKIP[k]);
+    if (!keys.length) { fill({}, ["서류 없이 직접 입력 중."]); go(2); return; }
+    const raw = await runOcr(cfg.ocr, images, keys);
     const j = await post("/ocr-normalize", { raw });
+    const skipped = ["biz","id","bank"].filter(k => !keys.includes(k)).map(k => ({ biz:"사업자등록증", id:"신분증", bank:"통장사본" }[k]));
+    if (skipped.length) j.warnings.push(`직접 입력 필요: ${skipped.join(", ")}`);
     fill(j.fields, j.warnings); go(2);
   } catch (e) { err.textContent = "인식 실패: " + e.message; }
   finally { btn.disabled = false; btn.textContent = "인식하기"; }
 });
 document.getElementById("skipOcr").addEventListener("click", async () => { try { await loadConfig(); } catch (e) { document.getElementById("err1").textContent = e.message; return; } fill({}, ["자동 인식 없이 직접 입력 중."]); go(2); });
 
-async function runOcr(ocr, imgs) {
-  const list = ["biz","id","bank"].map(k => imgs[k]).filter(Boolean).map(d => { const m = /^data:(image\/[a-z]+);base64,(.+)$/i.exec(d); return { mime: m[1], data: m[2] }; });
+async function runOcr(ocr, imgs, keys) {
+  const NAMES = { biz:"사업자등록증", id:"주민등록증(또는 운전면허증)", bank:"통장사본(계좌확인서)" };
+  const list = keys.map(k => imgs[k]).map(d => { const m = /^data:(image\/[a-z]+);base64,(.+)$/i.exec(d); return { mime: m[1], data: m[2] }; });
+  // 제공된 이미지 순서를 프롬프트에 명시 (빠진 서류의 항목은 null)
+  const missing = ["biz","id","bank"].filter(k => !keys.includes(k));
+  const note = `\n\n[실제 제공된 이미지 순서] ${keys.map((k, i) => `[${i + 1}] ${NAMES[k]}`).join(" ")}` + (missing.length ? `\n제공되지 않은 서류: ${missing.map(k => NAMES[k]).join(", ")} → 해당 항목(${missing.join(", ")})은 모두 null.` : "");
+  const prompt = ocr.prompt + note;
   let text;
   if (ocr.provider === "anthropic") {
     const content = list.map(i => ({ type:"image", source:{ type:"base64", media_type:i.mime, data:i.data } }));
-    content.push({ type:"text", text: ocr.prompt + "\n\nJSON 외의 텍스트는 출력하지 마라." });
+    content.push({ type:"text", text: prompt + "\n\nJSON 외의 텍스트는 출력하지 마라." });
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method:"POST",
       headers:{ "content-type":"application/json", "x-api-key": ocr.apiKey, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
@@ -251,7 +276,7 @@ async function runOcr(ocr, imgs) {
     if (!r.ok) throw new Error("OCR API " + r.status + ": " + (await r.text()).slice(0, 200));
     const d = await r.json(); text = (d.content || []).filter(c => c.type === "text").map(c => c.text).join("");
   } else {
-    const parts = [{ text: ocr.prompt }, ...list.map(i => ({ inline_data:{ mime_type:i.mime, data:i.data } }))];
+    const parts = [{ text: prompt }, ...list.map(i => ({ inline_data:{ mime_type:i.mime, data:i.data } }))];
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${ocr.model}:generateContent?key=${ocr.apiKey}`, {
       method:"POST", headers:{ "content-type":"application/json" },
       body: JSON.stringify({ contents:[{ parts }], generationConfig:{ response_mime_type:"application/json", temperature:0 } }),
