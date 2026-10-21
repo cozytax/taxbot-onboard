@@ -1,18 +1,18 @@
 /**
  * taxbot-onboard Worker
  *
+ * 내부용. 직원이 고정 링크(index.html?k=STAFF_KEY)를 열어 사용.
+ *
  * 라우트
- *   GET  /link    직원용: 기장료·이체시작월을 서명한 고객 링크 생성   (key=STAFF_KEY 필요)
- *   POST /ocr     고객 페이지: 사업자등록증·신분증·통장사본 이미지 → JSON 추출 (이미지 저장 안 함)
- *   POST /submit  고객 페이지: 확인된 데이터 → 기존 taxbot Worker 4개 API 호출 → Postmark 결과 메일
+ *   POST /ocr     사업자등록증·신분증·통장사본 이미지 → JSON 추출 (이미지 저장 안 함)
+ *   POST /submit  확인된 데이터 → 기존 taxbot Worker 4개 API 호출 → Postmark 결과 메일
+ *   두 라우트 모두 body.key === STAFF_KEY 필요
  *
  * 환경변수(wrangler secret / vars)
  *   GEMINI_API_KEY, GEMINI_MODEL(기본 gemini-2.5-flash)
  *   TAXBOT_BASE          기존 Worker 주소 — secret 으로 등록 (공개 저장소에 올리지 말 것)
- *   STAFF_KEY            /link 호출용 직원 키
- *   SIGN_SECRET          링크 서명용 비밀키 (아무 긴 문자열)
+ *   STAFF_KEY            직원 접근 키 (링크의 ?k= 값)
  *   POSTMARK_TOKEN, MAIL_FROM, MAIL_TO
- *   PAGE_URL             onboard.html이 올라간 주소 (예: https://onboard.pages.dev/onboard.html)
  *   ALLOWED_ORIGIN       CORS 허용 오리진 (기본 *)
  *   CMS_PAYMM            /excel 의 paymm 값 (기본 12) — 의미 확인 필요
  *   DEPOSIT_DATE         이체일 (기본 20)
@@ -71,7 +71,6 @@ export default {
     if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
     try {
-      if (req.method === "GET" && url.pathname === "/link") return json(await makeLink(url, env), cors);
       if (req.method === "POST" && url.pathname === "/ocr") return json(await ocr(await req.json(), env), cors);
       if (req.method === "POST" && url.pathname === "/submit") return json(await submit(await req.json(), env), cors);
       return json({ ok: false, error: "not found" }, cors, 404);
@@ -81,21 +80,9 @@ export default {
   },
 };
 
-/* ---------- /link ---------- */
-async function makeLink(url, env) {
-  const key = url.searchParams.get("key");
-  if (!env.STAFF_KEY || key !== env.STAFF_KEY) throw new Error("unauthorized");
-  const amount = digits(url.searchParams.get("amount"));
-  const start = digits(url.searchParams.get("start")); // YYYYMM
-  if (!amount || !/^\d{6}$/.test(start)) throw new Error("amount(숫자), start(YYYYMM) 필요");
-  const sig = await hmac(`${amount}|${start}`, env.SIGN_SECRET);
-  const link = `${env.PAGE_URL}?amount=${amount}&start=${start}&sig=${sig}`;
-  return { ok: true, link, amount, start, depositDate: env.DEPOSIT_DATE || "20" };
-}
-
 /* ---------- /ocr ---------- */
 async function ocr(body, env) {
-  await verifySig(body, env); // 유효한 링크에서만 OCR 허용 (외부 남용 방지)
+  checkKey(body, env);
   const imgs = ["biz", "id", "bank"].map((k) => body?.images?.[k]).filter(Boolean);
   if (imgs.length < 1) throw new Error("이미지가 없습니다");
 
@@ -170,8 +157,11 @@ async function ocr(body, env) {
 
 /* ---------- /submit ---------- */
 async function submit(p, env) {
-  // 1) 서명 검증 (사무실 지정값 변조 방지)
-  const { amount, start } = await verifySig(p, env);
+  checkKey(p, env);
+  // 1) 사무실 입력값
+  const amount = digits(p.amount), start = digits(p.start);
+  if (!amount) throw new Error("월 기장료 누락");
+  if (!/^\d{6}$/.test(start)) throw new Error("이체 시작월 형식 오류 (YYYYMM)");
 
   // 2) 필수값
   const need = { bizNo: "사업자등록번호", bizName: "상호", repName: "대표자명", rrn: "주민등록번호",
@@ -271,11 +261,8 @@ async function submit(p, env) {
 }
 
 /* ---------- helpers ---------- */
-async function verifySig(p, env) {
-  const amount = digits(p?.amount), start = digits(p?.start);
-  const sig = await hmac(`${amount}|${start}`, env.SIGN_SECRET);
-  if (!amount || !start || sig !== p?.sig) throw new Error("링크 서명 불일치 — 사무실에 새 링크를 요청하세요");
-  return { amount, start };
+function checkKey(p, env) {
+  if (!env.STAFF_KEY || p?.key !== env.STAFF_KEY) throw new Error("접근 키가 올바르지 않습니다");
 }
 function corsHeaders(env) {
   return {

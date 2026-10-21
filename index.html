@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>편한세무회계 수임 등록</title>
+<title>수임 등록 (내부용)</title>
 <style>
   :root { --ink:#1a1a1a; --sub:#6b6b6b; --line:#e5e5e5; --bg:#fafafa; --acc:#2d5bff; --warn:#b45309; --warnbg:#fff7ed; --err:#b91c1c; }
   * { box-sizing:border-box; }
@@ -44,25 +44,26 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>편한세무회계 수임 등록</h1>
-  <p class="lead">사진 3장만 올리면 나머지는 자동으로 채워집니다. 확인 후 제출해 주세요.</p>
+  <h1>수임 등록 <span style="font-size:13px;color:var(--sub);font-weight:400">내부용</span></h1>
+  <p class="lead">고객이 보낸 사진 3장을 올리면 자동으로 채워짐. 확인·보완 후 제출하면 결과 메일 발송.</p>
 
   <div id="invalid" class="card" style="display:none">
-    <h2>링크가 올바르지 않습니다</h2>
-    <p class="hint">사무실에서 받은 링크로 다시 접속해 주세요.</p>
+    <h2>접근 키 필요</h2>
+    <p class="hint">주소 뒤에 <code>?k=직원키</code> 를 붙여 접속. 한 번 입력하면 이 브라우저에 저장됨.</p>
+    <input id="keyInput" placeholder="직원 키 입력"><button class="primary" id="keyBtn">확인</button>
   </div>
 
   <!-- STEP 1 : 업로드 -->
   <div class="step on" id="s1">
     <div class="card">
       <h2>1. 서류 사진 업로드</h2>
-      <p class="hint">글자가 또렷하게 보이도록 정면에서 찍어 주세요. 사진은 인식 후 즉시 폐기되며 서버에 저장되지 않습니다.</p>
+      <p class="hint">사진은 인식 후 즉시 폐기되며 서버에 저장되지 않음.</p>
       <label>사업자등록증</label>
-      <div class="upload" id="u-biz"><input type="file" accept="image/*" capture="environment" data-k="biz"><span>탭하여 촬영 또는 선택</span></div>
+      <div class="upload" id="u-biz"><input type="file" accept="image/*" data-k="biz"><span>클릭하여 선택 (또는 드래그)</span></div>
       <label>대표자 신분증 (주민등록증 / 운전면허증)</label>
-      <div class="upload" id="u-id"><input type="file" accept="image/*" capture="environment" data-k="id"><span>탭하여 촬영 또는 선택</span></div>
+      <div class="upload" id="u-id"><input type="file" accept="image/*" data-k="id"><span>클릭하여 선택 (또는 드래그)</span></div>
       <label>통장사본 (계좌확인서)</label>
-      <div class="upload" id="u-bank"><input type="file" accept="image/*" data-k="bank"><span>탭하여 촬영 또는 선택</span></div>
+      <div class="upload" id="u-bank"><input type="file" accept="image/*" data-k="bank"><span>클릭하여 선택 (또는 드래그)</span></div>
       <button class="primary" id="btnOcr" disabled>인식하기</button>
       <div class="err" id="err1"></div>
       <button class="link" id="skipOcr">사진 없이 직접 입력</button>
@@ -74,7 +75,7 @@
     <form id="f" autocomplete="off">
       <div class="card">
         <h2>2. 자동 인식 결과 확인</h2>
-        <p class="hint">파란 줄 항목은 자동 인식된 값입니다. 틀린 부분을 수정해 주세요.</p>
+        <p class="hint">파란 줄 항목은 자동 인식 값. 틀린 부분 수정.</p>
         <div class="warn" id="warnBox" style="display:none"><ul id="warnList"></ul></div>
 
         <label>구분</label>
@@ -95,7 +96,7 @@
         </div>
         <label>대표자 주민등록번호</label>
         <input name="rrn" class="auto" inputmode="numeric" placeholder="000000-0000000" required>
-        <div class="hint">홈택스 수임동의·세무대리 신청에 필요합니다. 13자리 모두 확인해 주세요.</div>
+        <div class="hint">홈택스 수임요청·세무대리 신청에 사용. 13자리 확인.</div>
         <label>대표자 자택 주소</label><input name="homeAddress" class="auto">
       </div>
 
@@ -107,21 +108,20 @@
         </div>
         <label>계좌번호</label><input name="accountNumber" class="auto" inputmode="numeric" required>
         <input type="hidden" name="bankCode">
-        <div class="fixed" style="margin-top:14px">
-          <div><b id="fxAmount"></b><span>월 기장료</span></div>
-          <div><b id="fxStart"></b><span>이체 시작월</span></div>
-          <div><b>매월 20일</b><span>이체일</span></div>
-        </div>
       </div>
 
       <div class="card">
-        <h2>3. 직접 입력</h2>
-        <label>휴대폰 번호</label><input name="phone" type="tel" inputmode="numeric" placeholder="010-0000-0000" required>
+        <h2>3. 사무실 입력</h2>
+        <div class="row">
+          <div><label>월 기장료 (원)</label><input name="amount" inputmode="numeric" placeholder="110000" required></div>
+          <div><label>이체 시작월 (YYYYMM)</label><input name="start" inputmode="numeric" placeholder="202611" required></div>
+        </div>
+        <div class="hint">이체일은 매월 20일 고정.</div>
+        <label>고객 휴대폰 번호</label><input name="phone" type="tel" inputmode="numeric" placeholder="010-0000-0000" required>
         <label>이메일</label><input name="email" type="email" required>
         <label>홈택스 아이디</label><input name="hometaxId" required>
         <label>홈택스 비밀번호</label><input name="hometaxPw" type="password" required>
-        <div class="hint">홈택스 수임동의 및 세무대리 처리에만 사용됩니다.</div>
-        <label class="agree"><input type="checkbox" id="agree" required><span>위 내용이 사실임을 확인하며, 세무대리 정보이용 및 CMS 자동이체 신청에 동의합니다.</span></label>
+        <label class="agree"><input type="checkbox" id="agree" required><span>고객 확인 완료 — 택스봇·홈택스 등록, CMS·세무대리 신청서 생성, 결과 메일 발송</span></label>
         <button class="primary" id="btnSubmit" type="submit">제출하기</button>
         <div class="err" id="err2"></div>
       </div>
@@ -131,8 +131,9 @@
   <!-- STEP 3 : 완료 -->
   <div class="step" id="s3">
     <div class="card done">
-      <h2>등록이 접수되었습니다</h2>
-      <p class="hint">홈택스 수임동의 요청 알림이 곧 발송됩니다. 수임동의를 완료해 주시면 처리가 마무리됩니다.<br>문의: 편한세무회계</p>
+      <h2>처리 완료</h2>
+      <p class="hint" id="doneMsg">결과 메일이 발송됐습니다. 첨부 3종(CMS 신청서·세무대리 신청서·MEM 엑셀)과 택스봇 등록 결과를 확인하세요.</p>
+      <button class="primary" onclick="location.reload()">다음 업체 등록</button>
     </div>
   </div>
 </div>
@@ -141,14 +142,17 @@
 const WORKER_BASE = "https://taxbot-onboard.YOUR-SUBDOMAIN.workers.dev"; // ← 배포 후 교체
 
 const q = new URLSearchParams(location.search);
-const AMOUNT = q.get("amount"), START = q.get("start"), SIG = q.get("sig");
-if (!AMOUNT || !START || !SIG) {
+let KEY = q.get("k") || "";
+try { if (KEY) localStorage.setItem("onboard_key", KEY); else KEY = localStorage.getItem("onboard_key") || ""; } catch {}
+if (!KEY) {
   document.getElementById("invalid").style.display = "";
   document.getElementById("s1").classList.remove("on");
-} else {
-  document.getElementById("fxAmount").textContent = Number(AMOUNT).toLocaleString() + "원";
-  document.getElementById("fxStart").textContent = START.slice(0,4) + "." + START.slice(4);
 }
+document.getElementById("keyBtn").addEventListener("click", () => {
+  const v = document.getElementById("keyInput").value.trim(); if (!v) return;
+  try { localStorage.setItem("onboard_key", v); } catch {}
+  location.search = "?k=" + encodeURIComponent(v);
+});
 
 const images = {};
 document.querySelectorAll(".upload input").forEach(inp => {
@@ -186,13 +190,13 @@ document.getElementById("btnOcr").addEventListener("click", async () => {
   const btn = document.getElementById("btnOcr"), err = document.getElementById("err1");
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>인식 중 (10~20초)'; err.textContent = "";
   try {
-    const r = await fetch(WORKER_BASE + "/ocr", { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ images, amount: AMOUNT, start: START, sig: SIG }) });
+    const r = await fetch(WORKER_BASE + "/ocr", { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ images, key: KEY }) });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || "인식 실패");
     fill(j.fields, j.warnings);
     go(2);
   } catch (e) {
-    err.textContent = "인식에 실패했습니다: " + e.message + " — 다시 시도하거나 직접 입력해 주세요.";
+    err.textContent = "인식 실패: " + e.message;
   } finally { btn.disabled = false; btn.textContent = "인식하기"; }
 });
 document.getElementById("skipOcr").addEventListener("click", () => { fill({}, ["자동 인식 없이 직접 입력 중입니다."]); go(2); });
@@ -211,12 +215,16 @@ document.getElementById("f").addEventListener("submit", async (ev) => {
   const btn = document.getElementById("btnSubmit"), err = document.getElementById("err2");
   const data = Object.fromEntries(new FormData(ev.target).entries());
   if (data.rrn.replace(/\D/g,"").length !== 13) { err.textContent = "주민등록번호 13자리를 확인해 주세요."; return; }
-  Object.assign(data, { amount: AMOUNT, start: START, sig: SIG });
+  if (!/^\d{6}$/.test(data.start.replace(/\D/g,""))) { err.textContent = "이체 시작월은 YYYYMM 형식 (예: 202611)"; return; }
+  data.key = KEY;
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>등록 처리 중'; err.textContent = "";
   try {
     const r = await fetch(WORKER_BASE + "/submit", { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify(data) });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || "처리 실패");
+    const r2 = j.results || {};
+    const bad = Object.entries(r2).filter(([k,v]) => k !== "register" && v !== "ok").map(([k,v]) => k + ": " + v);
+    if (bad.length) document.getElementById("doneMsg").textContent = "메일은 발송됐지만 일부 실패: " + bad.join(" / ");
     go(3);
   } catch (e) {
     err.textContent = e.message;

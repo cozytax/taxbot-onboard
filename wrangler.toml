@@ -5,7 +5,6 @@ compatibility_date = "2026-01-01"
 [vars]
 MAIL_FROM = "noreply@kongventures.com"      # Postmark 승인된 발신자로 교체
 MAIL_TO = "office@cozytax.co.kr"            # 결과 수신 메일
-PAGE_URL = "https://cozytax.github.io/taxbot-onboard/"
 ALLOWED_ORIGIN = "https://cozytax.github.io"
 GEMINI_MODEL = "gemini-2.5-flash"
 CMS_PAYMM = "12"
@@ -14,6 +13,5 @@ DEPOSIT_DATE = "20"
 # secrets (wrangler secret put) — 저장소에 절대 커밋하지 말 것:
 #   TAXBOT_BASE      기존 taxbot Worker 주소 (무인증 GET API라 공개 금지)
 #   GEMINI_API_KEY
-#   STAFF_KEY        직원용 링크 생성 키
-#   SIGN_SECRET      링크 서명 키 (긴 랜덤 문자열)
+#   STAFF_KEY        직원 접근 키 (페이지 주소 뒤 ?k= 값)
 #   POSTMARK_TOKEN
