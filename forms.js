@@ -44,8 +44,9 @@ window.FORMS = (() => {
   `;
 
   /* ---------- 1. CMS 자동이체 이용 신청서 (JPG) ---------- */
-  function cms(d) {
+  function cms(d, opt = {}) {
     const { o, c, t } = d;
+    const sign = (label) => opt.blankSign ? `<span class="tiny">${label}</span>` : signC(label);
     return `
 <div class="page" style="font-size:10.5px;padding:34px 40px;">
   <div style="text-align:center;font-size:20px;font-weight:700;letter-spacing:3px;padding-top:6px;">자동이체 이용 신청서</div>
@@ -111,8 +112,8 @@ window.FORMS = (() => {
   <div class="date-line">${t.y} 년 &nbsp; ${t.m} 월 &nbsp; ${t.d} 일</div>
   <table style="margin-top:4px;">
     <tr>
-      <th style="width:14%">신청인</th><td style="width:36%;height:52px;"><span style="margin-left:60px;">${esc(c.repName)}</span> ${signC("(인) 또는 서명")}</td>
-      <th style="width:14%">예금(카드)주<br>동의란</th><td><span style="margin-left:60px;">${esc(c.accountHolder)}</span> ${signC("(인) 또는 서명")}</td>
+      <th style="width:14%">신청인</th><td style="width:36%;height:52px;"><span style="margin-left:60px;">${esc(c.repName)}</span> ${sign("(인) 또는 서명")}</td>
+      <th style="width:14%">예금(카드)주<br>동의란</th><td><span style="margin-left:60px;">${esc(c.accountHolder)}</span> ${sign("(인) 또는 서명")}</td>
     </tr>
   </table>
   <div class="tiny" style="margin-top:6px;color:#c8102e;font-weight:700;">*신청인과 예금주/카드주가 상이한 경우에는 예금주/카드주가 의 동의 필요하며, 날인 또는 서명은 출금통장의 거래날인, 서명 사용</div>
@@ -369,7 +370,7 @@ window.FORMS = (() => {
     <div style="text-align:center;">수임인(乙)<br>“편한세무회계”<br>대표 &nbsp;&nbsp;<span style="display:inline-block;min-width:90px;">편 성 웅</span> &nbsp;${signO("(인)")}</div>
   </div>
 </div>`;
-    return [p1, p2, p3, p4];
+    return [p1, p2, p3, p4, cms(d, { blankSign: true })];
   }
 
   return { CSS, cms, hometax, nhis, goyong, pension, contract, excelRow };
