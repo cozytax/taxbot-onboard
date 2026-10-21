@@ -292,14 +292,24 @@ window.FORMS = (() => {
     const adjRows = [["1억 미만","300,000원","500,000원"],["1억 ~ 3억 미만","300,000원 + 1억원 초과금액 × 0.20%","500,000원 + 1억원 초과금액 × 0.25%"],["3억 ~ 5억 미만","700,000원 + 3억원 초과금액 × 0.15%","1,000,000원 + 3억원 초과금액 × 0.25%"],["5억 ~ 10억 미만","1,000,000원 + 5억원 초과금액 × 0.12%","1,500,000원 + 5억원 초과금액 × 0.20%"],["10억 ~ 20억 미만","1,600,000원 + 10억원 초과금액 × 0.10%","2,500,000원 + 10억원 초과금액 × 0.15%"],["20억 ~30억 미만","2,600,000원 + 20억원 초과금액 × 0.08%","4,000,000원 + 20억원 초과금액 × 0.13%"],["30억 ~ 50억 미만","3,400,000원 + 30억원 초과금액 × 0.06%","5,300,000원 + 30억원 초과금액 × 0.08%"],["50억 이상","별도 합의","별도 합의"]];
     const H = `.page.ct { font-size:12px; line-height:1.7; padding:60px 64px; } .page.ct h3 { font-size:14px; margin:18px 0 6px; } .page.ct th { background:#0c477e; color:#fff; font-weight:500; } .page.ct td.l { background:#f1f1f1; text-align:center; }`;
     const p1 = `
-<div class="page ct" style="position:relative;background:#0c477e;color:#fff;">
+<div class="page ct" style="position:relative;background:#0c477e;color:#fff;padding:64px 72px;">
   <style>${H}</style>
-  <div style="font-size:30px;font-weight:700;margin-top:30px;">편한세무회계</div>
-  <div style="font-size:30px;font-weight:700;margin-top:10px;">기장대리 계약서</div>
-  <div style="position:absolute;top:360px;left:0;right:0;text-align:center;font-size:12.5px;font-weight:700;line-height:1.9;color:#fff;">
-    카카오톡 : 편한세무회계<br>${esc(o.address)}<br>T: 02)6268-2000 &nbsp;&nbsp;&nbsp; F: 02)591-0720 &nbsp;&nbsp;&nbsp;E: cozytax@naver.com
+  <img src="assets/logo-horizontal-white.png" style="position:absolute;left:72px;top:64px;width:170px;">
+  <div style="position:absolute;left:72px;right:72px;top:360px;">
+    <div style="font-size:11px;letter-spacing:4px;color:#bcd0e6;margin-bottom:14px;">ENGAGEMENT AGREEMENT</div>
+    <div style="font-size:40px;font-weight:700;letter-spacing:2px;line-height:1.2;">기장대리 계약서</div>
+    <div style="width:56px;height:2px;background:#fff;margin:26px 0 30px;"></div>
+    <table style="width:auto;border:0;font-size:13px;line-height:1.5;">
+      <tr><td style="border:0;padding:4px 28px 4px 0;color:#bcd0e6;">위임인</td><td style="border:0;padding:4px 0;font-weight:500;">${esc(c.bizName)}</td></tr>
+      <tr><td style="border:0;padding:4px 28px 4px 0;color:#bcd0e6;">수임인</td><td style="border:0;padding:4px 0;font-weight:500;">편한세무회계</td></tr>
+      <tr><td style="border:0;padding:4px 28px 4px 0;color:#bcd0e6;">계약일</td><td style="border:0;padding:4px 0;font-weight:500;">${t.y}. ${String(t.m).padStart(2, "0")}. ${String(t.d).padStart(2, "0")}.</td></tr>
+    </table>
   </div>
-  <img src="assets/logo-horizontal-white.png" style="position:absolute;left:64px;bottom:120px;width:300px;">
+  <div style="position:absolute;left:72px;right:72px;bottom:64px;border-top:1px solid rgba(255,255,255,.35);padding-top:16px;font-size:11px;line-height:1.9;color:#bcd0e6;">
+    편한세무회계 &nbsp;|&nbsp; 세무사 편성웅<br>
+    ${esc(o.address)}<br>
+    T 02-6268-2000 &nbsp;&nbsp; F 02-591-0720 &nbsp;&nbsp; E cozytax@naver.com &nbsp;&nbsp; 카카오톡 편한세무회계
+  </div>
 </div>`;
     const p2 = `
 <div class="page ct">
