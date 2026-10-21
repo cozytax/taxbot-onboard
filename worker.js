@@ -158,6 +158,7 @@ async function send(p, env) {
       ${row("휴대폰", c.phone)}${row("이메일", c.email)}${row("홈택스 ID", c.hometaxId)}${row("홈택스 PW", c.hometaxPw)}
       ${row("계좌", `${c.bankName || ""}(${c.bankCode || ""}) ${c.accountNumber || ""} / ${c.accountHolder || ""}`)}
       ${row("월 기장료", Number(digits(c.amount)).toLocaleString() + "원")}${row("이체 시작월", c.start)}
+      ${row("종전 세무대리인", c.prevAgent === "Y" ? `${c.prevAgentName || ""} ${c.prevAgentPhone || ""}` : "없음")}${row("소개자/유입", c.referrer)}${row("특이사항", c.note)}
     </table>
     <p>첨부: ${files.map((f) => esc(f.filename)).join(", ")}</p>
     <h3>선물 요청 카톡 (복붙용)</h3>
@@ -206,7 +207,7 @@ async function notionCreate(c, env) {
   const props = {
     "거래처명": { title: [{ text: { content: c.bizName } }] },
     "구분": { multi_select: [{ name: c.bizType === "02" ? "법인사업자" : "개인사업자" }] },
-    "종류": { multi_select: [{ name: "신규" }] },
+    "종류": { multi_select: [{ name: c.prevAgent === "Y" ? "이관" : "신규" }] },
     "상태": { status: { name: "진행 중" } },
     "사업자번호": txt(c.bizNo),
     "대표자": txt(c.repName),
@@ -220,7 +221,10 @@ async function notionCreate(c, env) {
     "기장료(VAT포함)": { number: Number(digits(c.amount)) || null },
     "이체 희망일": { select: { name: `${env.DEPOSIT_DATE || "20"}일` } },
     "CMS": { checkbox: true },
-    "특이사항": txt(`업태/종목: ${c.category || ""} / ${c.item || ""}` + (c.regType ? ` · ${c.regType}` : "") + (c.start ? ` · 이체 시작 ${c.start}` : "")),
+    "특이사항": txt([c.note, `업태/종목: ${c.category || ""} / ${c.item || ""}`, c.regType, c.start ? `이체 시작 ${c.start}` : ""].filter(Boolean).join(" · ")),
+    "종전 세무대리인": txt(c.prevAgent === "Y" ? c.prevAgentName : ""),
+    "종전 세무대리인 연락처": txt(c.prevAgent === "Y" ? c.prevAgentPhone : ""),
+    "소개자": txt(c.referrer),
   };
   if (c.email && /@/.test(c.email)) props["이메일"] = { email: c.email };
   if (bankOpt) props["은행"] = { select: { name: bankOpt } };

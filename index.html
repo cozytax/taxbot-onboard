@@ -120,7 +120,7 @@
       </div>
 
       <div class="card">
-        <h2>3. 사무실 입력</h2>
+        <h2>3. 사무실 입력 <span style="font-size:12px;color:var(--sub);font-weight:400;">(필수는 아니지만 최대한 많이 입력)</span></h2>
         <div class="row">
           <div><label>월 기장료 (원)</label><input name="amount" inputmode="numeric" placeholder="110000" required></div>
           <div><label>이체 시작월 (YYYYMM)</label><input name="start" inputmode="numeric" placeholder="202611" required></div>
@@ -132,7 +132,20 @@
           <div><label>홈택스 아이디</label><input name="hometaxId"></div>
           <div><label>홈택스 비밀번호</label><input name="hometaxPw"></div>
         </div>
-        <div class="hint">홈택스 정보는 서류에 안 들어가고 결과 메일에만 적힘.</div>
+        <div class="hint">홈택스 정보는 서류에 안 들어가고 결과 메일·노션에만 적힘.</div>
+        <label>종전 세무대리인</label>
+        <div style="display:flex;gap:18px;font-size:15px;">
+          <label style="display:flex;align-items:center;gap:6px;margin:0;color:var(--ink);font-size:15px;"><input type="radio" name="prevAgent" value="N" checked style="width:auto;"> 없음</label>
+          <label style="display:flex;align-items:center;gap:6px;margin:0;color:var(--ink);font-size:15px;"><input type="radio" name="prevAgent" value="Y" style="width:auto;"> 있음 (이관)</label>
+        </div>
+        <div id="prevBox" style="display:none;">
+          <div class="row">
+            <div><label>종전 세무대리인 사무실명</label><input name="prevAgentName" placeholder="○○세무회계"></div>
+            <div><label>종전 세무대리인 연락처</label><input name="prevAgentPhone" type="tel" inputmode="numeric" placeholder="02-000-0000"></div>
+          </div>
+        </div>
+        <label>소개자 / 유입 경로</label><input name="referrer" placeholder="예: BNI 홍길동 소개, 찾아줘세무사">
+        <label>특이사항</label><input name="note" placeholder="메모">
         <button class="primary" id="btnGen" type="submit">서류 7종 생성</button>
         <div class="err" id="err2"></div>
       </div>
@@ -321,6 +334,9 @@ document.getElementById("f").addEventListener("submit", async (ev) => {
   finally { btn.disabled = false; btn.textContent = "서류 7종 생성"; }
 });
 document.getElementById("btnBack").addEventListener("click", () => go(2));
+document.querySelectorAll('input[name="prevAgent"]').forEach(r => r.addEventListener("change", () => {
+  document.getElementById("prevBox").style.display = document.querySelector('input[name="prevAgent"]:checked').value === "Y" ? "" : "none";
+}));
 
 const BANK_CODES = { "국민":"004","KB":"004","농협":"011","NH":"011","하나":"081","신한":"088","카카오":"090","토스":"092","케이":"089","기업":"003","IBK":"003","산업":"002","외환":"005","수협":"007","우리":"020","SC제일":"023","제일":"023","씨티":"027","대구":"031","iM":"031","부산":"032","광주":"034","제주":"035","전북":"037","경남":"039","새마을":"045","신협":"048","우체국":"071" };
 function guessBankCode(name) { const n = String(name || "").replace(/\s/g, ""); for (const [k, v] of Object.entries(BANK_CODES)) if (n.includes(k)) return v; return ""; }
