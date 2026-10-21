@@ -158,6 +158,15 @@ async function send(p, env) {
       ${row("월 기장료", Number(digits(c.amount)).toLocaleString() + "원")}${row("이체 시작월", c.start)}
     </table>
     <p>첨부: ${files.map((f) => esc(f.filename)).join(", ")}</p>
+    <h3>선물 요청 카톡 (복붙용)</h3>
+    <pre style="background:#f6f6f6;border:1px solid #e5e5e5;border-radius:6px;padding:12px 14px;font-family:inherit;font-size:14px;line-height:1.6;white-space:pre-wrap">안녕하세요. 저희가 업체를 새로 수임하게 돼서
+선물 부탁드리려고 합니다
+
+업체명 : ${esc(c.bizName)}
+전화번호 : ${esc(c.phone)}
+주소 : ${esc(c.bizAddress)}
+
+입니다. 잘 부탁드리겠습니다. 늘 감사합니다^^</pre>
     <p style="color:#999;font-size:12px">${esc(p.stamp || "")} · 수임 등록 페이지에서 자동 생성</p>`;
 
   const r = await fetch("https://api.resend.com/emails", {
