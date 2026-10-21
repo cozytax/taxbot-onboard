@@ -292,14 +292,14 @@ window.FORMS = (() => {
     const adjRows = [["1억 미만","300,000원","500,000원"],["1억 ~ 3억 미만","300,000원 + 1억원 초과금액 × 0.20%","500,000원 + 1억원 초과금액 × 0.25%"],["3억 ~ 5억 미만","700,000원 + 3억원 초과금액 × 0.15%","1,000,000원 + 3억원 초과금액 × 0.25%"],["5억 ~ 10억 미만","1,000,000원 + 5억원 초과금액 × 0.12%","1,500,000원 + 5억원 초과금액 × 0.20%"],["10억 ~ 20억 미만","1,600,000원 + 10억원 초과금액 × 0.10%","2,500,000원 + 10억원 초과금액 × 0.15%"],["20억 ~30억 미만","2,600,000원 + 20억원 초과금액 × 0.08%","4,000,000원 + 20억원 초과금액 × 0.13%"],["30억 ~ 50억 미만","3,400,000원 + 30억원 초과금액 × 0.06%","5,300,000원 + 30억원 초과금액 × 0.08%"],["50억 이상","별도 합의","별도 합의"]];
     const H = `.page.ct { font-size:12px; line-height:1.7; padding:60px 64px; } .page.ct h3 { font-size:14px; margin:18px 0 6px; } .page.ct th { background:#0c477e; color:#fff; font-weight:500; } .page.ct td.l { background:#f1f1f1; text-align:center; }`;
     const p1 = `
-<div class="page ct" style="position:relative;">
+<div class="page ct" style="position:relative;background:#0c477e;color:#fff;">
   <style>${H}</style>
   <div style="font-size:30px;font-weight:700;margin-top:30px;">편한세무회계</div>
   <div style="font-size:30px;font-weight:700;margin-top:10px;">기장대리 계약서</div>
-  <div style="position:absolute;top:360px;left:0;right:0;text-align:center;font-size:12.5px;font-weight:700;line-height:1.9;">
+  <div style="position:absolute;top:360px;left:0;right:0;text-align:center;font-size:12.5px;font-weight:700;line-height:1.9;color:#fff;">
     카카오톡 : 편한세무회계<br>${esc(o.address)}<br>T: 02)6268-2000 &nbsp;&nbsp;&nbsp; F: 02)591-0720 &nbsp;&nbsp;&nbsp;E: cozytax@naver.com
   </div>
-  <img src="${o.logoUrl}" style="position:absolute;left:64px;bottom:120px;width:300px;">
+  <img src="assets/logo-horizontal-white.png" style="position:absolute;left:64px;bottom:120px;width:300px;">
 </div>`;
     const p2 = `
 <div class="page ct">
