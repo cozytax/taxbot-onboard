@@ -323,7 +323,7 @@ window.FORMS = (() => {
     <tr><td class="l">사업자등록번호</td><td colspan="2">${esc(c.bizNo)}</td><td>법인등록번호 : ${corp ? esc(c.corpRegNo || "") : ""}</td></tr>
     <tr><td class="l">주 &nbsp;&nbsp; 소</td><td colspan="2">${esc(c.bizAddress || "")}</td><td>임차료( &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ) + Vat.( &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; )</td></tr>
     <tr><td class="l">대 표 자</td><td colspan="2">${esc(c.repName)}</td><td></td></tr>
-    <tr><td class="l">연 락 처</td><td colspan="2">${esc(c.phone)}</td><td>실무자 :</td></tr>
+    <tr><td class="l">연 락 처</td><td colspan="2">${esc(c.phone)}</td><td>실무자 : ${esc([c.staffName, c.staffPhone].filter(Boolean).join(" "))}</td></tr>
     <tr><td class="l">이 메 일</td><td colspan="2">${esc(c.email || "")}</td><td></td></tr>
     <tr><td class="l">前 세무사</td><td colspan="2" class="c">${box(false)} 여 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${box(false)} 부</td><td>연락처 :</td></tr>
     <tr><td class="l">사업용/개인용 카드</td><td colspan="2">( &nbsp;&nbsp;&nbsp;&nbsp; )장/ ( &nbsp;&nbsp;&nbsp;&nbsp; )장</td><td></td></tr>

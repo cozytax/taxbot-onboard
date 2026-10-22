@@ -155,7 +155,7 @@ async function send(p, env) {
       ${row("구분", c.bizType === "02" ? "법인" : "개인")}${row("과세유형", c.regType)}
       ${row("사업자번호", c.bizNo)}${row("상호", c.bizName)}${row("대표자", c.repName)}${row("주민번호", c.rrn)}
       ${row("개업일", c.openDate)}${row("사업장", c.bizAddress)}${row("업태/종목", `${c.category || ""} / ${c.item || ""}`)}${row("자택주소", c.homeAddress)}
-      ${row("휴대폰", c.phone)}${row("이메일", c.email)}${row("홈택스 ID", c.hometaxId)}${row("홈택스 PW", c.hometaxPw)}
+      ${row("휴대폰", c.phone)}${row("실무자", [c.staffName, c.staffPhone].filter(Boolean).join(" "))}${row("이메일", c.email)}${row("홈택스 ID", c.hometaxId)}${row("홈택스 PW", c.hometaxPw)}
       ${row("계좌", `${c.bankName || ""}(${c.bankCode || ""}) ${c.accountNumber || ""} / ${c.accountHolder || ""}`)}
       ${row("월 기장료", Number(digits(c.amount)).toLocaleString() + "원")}${row("이체 시작월", c.start)}
       ${row("종전 세무대리인", c.prevAgent === "Y" ? `${c.prevAgentName || ""} ${c.prevAgentPhone || ""}` : "없음")}${row("소개자/유입", c.referrer)}${row("특이사항", c.note)}
@@ -221,7 +221,7 @@ async function notionCreate(c, env) {
     "기장료(VAT포함)": { number: Number(digits(c.amount)) || null },
     "이체 희망일": { select: { name: `${env.DEPOSIT_DATE || "20"}일` } },
     "CMS": { checkbox: true },
-    "특이사항": txt([c.note, `업태/종목: ${c.category || ""} / ${c.item || ""}`, c.regType, c.start ? `이체 시작 ${c.start}` : ""].filter(Boolean).join(" · ")),
+    "특이사항": txt([c.staffName || c.staffPhone ? `실무자 ${[c.staffName, c.staffPhone].filter(Boolean).join(" ")}` : "", c.note, `업태/종목: ${c.category || ""} / ${c.item || ""}`, c.regType, c.start ? `이체 시작 ${c.start}` : ""].filter(Boolean).join(" · ")),
     "종전 세무대리인": txt(c.prevAgent === "Y" ? c.prevAgentName : ""),
     "종전 세무대리인 연락처": txt(c.prevAgent === "Y" ? c.prevAgentPhone : ""),
     "소개자": txt(c.referrer),
